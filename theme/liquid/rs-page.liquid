@@ -10,7 +10,7 @@
   endif
   # v69: built-in neon SVG heroes for the Fortnite pages (theme assets), used only when no metafield or Files image exists.
   assign hero_svg = ''
-  if hero == blank and 'fortnite-stats,fortnite-item-shop,fortnite-leaderboard,fortnite-map,path-of-exile-2-stats,rust-stats,tf2-stats' contains page.handle
+  if hero == blank and 'fortnite-stats,fortnite-item-shop,fortnite-leaderboard,fortnite-map,path-of-exile-2-stats,rust-stats,tf2-stats,marathon-stats,marathon-runner-shells,marathon-weapons,marathon-loadout-planner' contains page.handle
     assign hero_svg = 'rs-hero-' | append: page.handle | append: '.svg'
   endif
 -%}

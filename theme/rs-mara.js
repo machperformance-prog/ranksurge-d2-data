@@ -29,6 +29,35 @@
   const TYI = { 'Pistol': '<path d="M4 8h13l2 2v2h-7l-1 2H8l-1 5H4l1-5H4z"/>', 'Assault Rifle': '<path d="M2 10h15l2 1h3v2h-8l-2 2h-2l-1 4H6l1-4H2z"/>', 'Sniper Rifle': '<path d="M2 11h20M8 11V8h5v3M16 11l-2 6h-2l1-6"/><circle cx="10.5" cy="7" r="1"/>', 'Shotgun': '<path d="M2 10h17l3 1v2H10l-2 5H5l1-5H2z"/><path d="M12 13h5"/>', 'SMG': '<path d="M4 9h12l3 2v2h-6v6h-3v-6H8l-1 3H4z"/>', 'Machine Gun': '<path d="M2 10h18v3H8l-1 5H4l1-5H2z"/><path d="M11 13v4h4v-4"/>', 'Precision Rifle': '<path d="M2 11h17l3 1v1H9l-2 5H4l1-5H2z"/><path d="M8 11V8h5v3"/>', 'Railgun': '<path d="M2 10h18l2 1v2H9l-2 5H4l1-5H2z"/><path d="M6 12h12"/>' };
   const tyIco = (t) => `<svg class="mr-i mr-i--ty" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${TYI[t] || IC.gun}</svg>`;
 
+  /* Weapon silhouettes (64x24) and Runner shell emblems (48x48): original RankSurge artwork, filled vectors so they stay sharp. */
+  const WS = {
+    'Pistol': 'M16 5h28l3 2.5V11H34l-1.5 2H29l-3.2 9.5h-7.6l3-9.5H18l-2-1.5zM44 8h4v2h-4z',
+    'Assault Rifle': 'M1 10l9-2.5h3.5l1.5-2h23l2-1.5h7l1 1.5h9l4 2.2V11H50l-1 1.5h-5.5L41 18h-5l2.2-5.5H33L28.5 21h-6l4-8.5h-4L20 14H12L2 16.5zM29 5.2h7V4h-7z',
+    'Sniper Rifle': 'M1 11.5l8-2h5l1.5-1.2H63V11H40l-1.5 1.5H33l-3.5 6H24l2.8-6h-6L18 14H9L1 15.5zM24 4.5h14v2.6H24zM27 7.1h2v1.2h-2zM34 7.1h2v1.2h-2z',
+    'Shotgun': 'M2 10.5l8.5-2.5H14l1.5-1.5H58l4 1.5V10H34.5l-.8 2.5H44v2.2H33l-1 1.3h-5.5l-3.8 6h-6.4l3.8-6H16L3 16z',
+    'SMG': 'M10 7h31l3-2h6v3h7l2 2.5V12H42l-2 2h-4l-2.5 8h-6l2.5-8h-2l-3.4 5.5h-5L24 14h-6l-2 2H10l-3 1V10z',
+    'Machine Gun': 'M1 10.5l9-3h4l1.5-2H50l2 1.5h8l3 2V11H46l-1 2h-6v7h-6v-7h-3.5L25 20h-6l3.8-7H16l-2 2H8L1 17z',
+    'Precision Rifle': 'M1 11l8-2h4.5L15 7.5h33l2-1h10l3 1.8V11H44l-1 1.6h-6.5l-3 6.4h-5.6l3-6.4h-5L23 14h-9L1 16.5zM25 4h12v2.5H25z',
+    'Railgun': 'M1 10l8-2h5l2-2.5h38l2 1.5h6l2 1.5V12h-8l-2 2H36l-4 7h-6.5l3.6-7H22l-2 2H9L1 17zM18 9.2h34v1.3H18z'
+  };
+  const SHG = {
+    triage: 'M18 6h12v12h12v12H30v12H18V30H6V18h12zM10 24h7l3-6 4 12 3-6h11v2H28.5l-4.5 9-4-12-2 5H10z',
+    assassin: 'M24 6c9 0 17 7.5 20 18-3 10.5-11 18-20 18S7 34.5 4 24C7 13.5 15 6 24 6zm0 9a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM6 40L40 6l2.5 2.5-34 34z',
+    recon: 'M24 4a20 20 0 1 1 0 40 20 20 0 0 1 0-40zm0 5a15 15 0 1 0 0 30 15 15 0 0 0 0-30zm0 5a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 4.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zM24 24L41 10l2 2.5zM33 17a3 3 0 1 1 0 6 3 3 0 0 1 0-6z',
+    sentinel: 'M24 3l18 6v13c0 11-7.5 19-18 23C13.5 41 6 33 6 22V9zm0 9l-8 4.5v9L24 30l8-4.5v-9z',
+    thief: 'M22 4h4v18h-4zM19 8h10v3H19zM24 21c-8 0-13 5-13 11 0 4 3 7 7 7v-5c-1.5 0-2-1-2-2 0-3 3.5-6 8-6s8 3 8 6c0 1-.5 2-2 2v5c4 0 7-3 7-7 0-6-5-11-13-11z',
+    vandal: 'M28 3L10 27h11l-4 18 21-27H26l6-15z',
+    destroyer: 'M8 14l4-8 4 8v20H8zM20 10l4-8 4 8v24h-8zM32 14l4-8 4 8v20h-8zM6 37h36v6H6z',
+    rook: 'M10 6h6v5h4V6h8v5h4V6h6v11l-4 4v14h4v7H10v-7h4V21l-4-4z',
+    bishop: 'M38 4l6 6-26 26-7 2 2-7zM9 33l6 6-5 5-6-6zM24 44A20 20 0 0 1 4 24h4a16 16 0 0 0 16 16z'
+  };
+  const SHC = { triage: '#D4FF3A', assassin: '#9B6BFF', recon: '#3D8BFF', sentinel: '#FF7A1A', thief: '#FF2D7A', vandal: '#FFD23A', destroyer: '#FF4B3A', rook: '#E8E6DC', bishop: '#B9C2CF' };
+  const AMC = { 'Light Rounds': '#D4FF3A', 'Heavy Rounds': '#FF7A1A', 'MIPS': '#FF2D7A', 'Volt Battery': '#3D8BFF' };
+  const ammoC = (a) => AMC[a] || '#9AA3B5';
+  const gun = (w, cls) => `<svg class="mr-gun${cls ? ' ' + cls : ''}" viewBox="0 0 64 24" aria-hidden="true" style="--c:${ammoC(w && w.am)}"><path fill="currentColor" d="${WS[w && w.ty] || WS['Assault Rifle']}"/></svg>`;
+  const emblem = (s, cls) => `<span class="mr-em${cls ? ' ' + cls : ''}" style="--c:${SHC[s.id] || '#D4FF3A'}" aria-hidden="true">${s.img ? `<img src="${esc(s.img)}" alt="" width="96" height="96" loading="lazy">` : `<svg viewBox="0 0 48 48"><path fill="currentColor" fill-rule="evenodd" d="${SHG[s.id] || SHG.rook}"/></svg>`}</span>`;
+  const ammoTag = (a) => a ? `<span class="mr-am" style="--c:${ammoC(a)}">${esc(a)}</span>` : '';
+
   /* ---------- data ---------- */
   let D = null;
   async function load() {
@@ -127,8 +156,8 @@
   /* ---------- weapon card + detail ---------- */
   const bar = (k, v) => v == null ? '' : `<span class="mr-bar"><span class="mr-bar__k">${STATN[k]}</span><span class="mr-bar__t"><span style="width:${Math.max(4, Math.min(100, (v / D.max[k]) * 100)).toFixed(0)}%"></span></span><b>${esc(v)}${k === 'rng' ? 'm' : ''}</b></span>`;
   function wCard(w) {
-    return `<li class="mr-card"><button type="button" class="mr-card__b" data-w="${w.id}" aria-label="${esc(w.n)} details">
-      <span class="mr-card__top">${tyIco(w.ty)}<span class="mr-card__n"><b>${esc(w.n)}</b><small>${esc(w.ty)}${w.am ? ' · ' + esc(w.am) : ''}${w.since ? ' · New in ' + esc(w.since) : ''}</small></span>${tierB(w.tier)}</span>
+    return `<li class="mr-card mr-card--w" style="--c:${ammoC(w.am)}"><button type="button" class="mr-card__b" data-w="${w.id}" aria-label="${esc(w.n)} details">
+      <span class="mr-card__sil">${gun(w)}</span><span class="mr-card__top"><span class="mr-card__n"><b>${esc(w.n)}</b><small>${esc(w.ty)}${w.since ? ', new in ' + esc(w.since) : ''}</small></span>${tierB(w.tier)}</span>${ammoTag(w.am)}
       ${w.dmg != null ? `<span class="mr-bars">${['dmg', 'acc', 'hnd', 'rng'].map((k) => bar(k, w[k])).join('')}</span>` : `<span class="mr-card__note">${esc(w.note || 'Stats not published yet.')}</span>`}
     </button><div class="mr-card__f">${cmpBtn('w', w.id)}<a class="mr-pill" href="${PAGES.planner}#add=${w.id}">${ico('plus')}Loadout</a></div></li>`;
   }
@@ -148,9 +177,9 @@
     const stats = w.dmg != null ? `<div class="mr-dstats">${['dmg', 'acc', 'hnd', 'rng'].filter((k) => w[k] != null).map((k) => `<div class="mr-dstat">${bar(k, w[k])}<small>${esc(rankIn(w, k))}</small></div>`).join('')}<p class="mr-fine">${w.mag ? `Magazine: <b>${w.mag}</b> rounds.` : w.drain ? `Volt drain: <b>${w.drain}%</b> of the battery per shot.` : ''} Range role: <b>${bandW(w)}</b>.</p></div>` : `<p class="mr-warn">${esc(w.note || 'Bungie has not published stats for this weapon yet.')}</p>`;
     const tbl = peers.length ? `<h3 class="mr-h3">How it compares with other ${w.ty === 'SMG' ? 'SMGs' : esc(w.ty.toLowerCase()) + 's'}</h3><div class="mr-tw"><table class="mr-t" data-sort><thead><tr><th scope="col"><button type="button" data-k="n">Weapon</button></th>${['dmg', 'acc', 'hnd', 'rng'].map((k) => `<th scope="col"><button type="button" data-k="${k}">${STATN[k]}</button></th>`).join('')}<th scope="col">Ammo</th></tr></thead><tbody>${[w].concat(peers).map((x) => `<tr class="${x.id === w.id ? 'is-me' : ''}"><th scope="row"><button type="button" class="mr-link" data-w="${x.id}">${esc(x.n)}</button>${x.tier ? ' ' + tierB(x.tier) : ''}</th>${['dmg', 'acc', 'hnd', 'rng'].map((k) => `<td data-v="${x[k] == null ? -1 : x[k]}">${x[k] == null ? '-' : esc(x[k])}</td>`).join('')}<td>${esc(x.am || '-')}</td></tr>`).join('')}</tbody></table></div>` : '';
     const pairs = D.loadouts.filter((l) => l.w.indexOf(w.n) > -1);
-    const d = sheet(`<div class="mr-dh">${tyIco(w.ty)}<div><h2 class="mr-h">${esc(w.n)} ${tierB(w.tier)}</h2><p class="mr-sub">${esc(w.ty)}${w.am ? ' · ' + esc(w.am) : ''}${w.since ? ' · New in ' + esc(w.since) : ''}</p></div></div>
+    const d = sheet(`<div class="mr-dsil">${gun(w, 'mr-gun--lg')}</div><div class="mr-dh"><div><h2 class="mr-h">${esc(w.n)} ${tierB(w.tier)}</h2><p class="mr-sub">${esc(w.ty)}${w.since ? ', new in ' + esc(w.since) : ''} ${ammoTag(w.am)}</p></div></div>
       ${w.why ? `<p class="mr-why">${ico('star')}${esc(w.why)}</p>` : ''}${stats}${tbl}
-      ${pairs.length ? `<h3 class="mr-h3">Loadouts that use it</h3><ul class="mr-mini">${pairs.map((l) => `<li><a href="${PAGES.planner}#l=${l.shell}.${l.w.map(slug).join('.')}"><b>${esc(l.n)}</b><small>${esc(D.SI[l.shell].n)} · ${l.w.map(esc).join(' + ')}</small></a></li>`).join('')}</ul>` : ''}
+      ${pairs.length ? `<h3 class="mr-h3">Loadouts that use it</h3><ul class="mr-mini">${pairs.map((l) => `<li><a href="${PAGES.planner}#l=${l.shell}.${l.w.map(slug).join('.')}"><b>${esc(l.n)}</b><small>${esc(D.SI[l.shell].n)} with ${l.w.map(esc).join(' and ')}</small></a></li>`).join('')}</ul>` : ''}
       <div class="mr-acts">${cmpBtn('w', w.id)}<a class="rs-btn" href="${PAGES.planner}#add=${w.id}">${ico('plus')}Add to my loadout</a></div>
       ${shareBlock(`${w.n} (Marathon ${w.ty}) stats on RankSurge`, url, aiW(w, url))}<p class="mr-fine">${esc(D.statsNote)}</p>`, true);
     sortable(d);
@@ -172,10 +201,10 @@
   }
 
   /* ---------- shells ---------- */
-  const art = (s) => s.img ? `<img class="mr-art__img" src="${esc(s.img)}" alt="${esc(s.n)} Runner shell in Marathon" width="96" height="96" loading="lazy">` : `<span class="mr-art__ph" aria-hidden="true">${ico('shell')}</span>`;
+
   function sCard(s) {
-    return `<li class="mr-card mr-card--s${s.soon ? ' is-soon' : ''}"><button type="button" class="mr-card__b" data-s="${s.id}" aria-label="${esc(s.n)} details">
-      <span class="mr-card__top"><span class="mr-art" data-img-slot="marathon-shell-${s.id}">${art(s)}</span><span class="mr-card__n"><b>${esc(s.n)}</b><small>${esc(s.role)}</small></span>${s.soon ? '<span class="mr-soon">Coming soon</span>' : tierB(s.tier)}</span>
+    return `<li class="mr-card mr-card--s${s.soon ? ' is-soon' : ''}" style="--c:${SHC[s.id]}"><button type="button" class="mr-card__b" data-s="${s.id}" aria-label="${esc(s.n)} details">
+      <span class="mr-card__top">${emblem(s)}<span class="mr-card__n"><b>${esc(s.n)}</b><small>${esc(s.role)}</small></span>${s.soon ? '<span class="mr-soon">Coming soon</span>' : tierB(s.tier)}</span>
       ${s.soon ? `<span class="mr-card__note">${esc(s.since)}. ${esc(s.why)}</span>` : `<span class="mr-abl">${(s.abilities || [s.prime, s.tact]).filter(Boolean).map((a) => `<span><b>${esc(a[0])}</b> ${esc(a[1])}</span>`).join('')}</span><span class="mr-card__meta">${s.best ? `<span>Best for: ${esc(s.best)}</span>` : ''}${s.diff ? `<span>Difficulty: ${esc(s.diff)}</span>` : ''}</span>`}
     </button>${s.soon ? '' : `<div class="mr-card__f">${cmpBtn('s', s.id)}<a class="mr-pill" href="${PAGES.planner}#shell=${s.id}">${ico('plus')}Loadout</a></div>`}</li>`;
   }
@@ -185,7 +214,7 @@
     const url = SITE + PAGES.shells + '#s-' + s.id;
     const ab = (L, h) => L && L.length ? `<h3 class="mr-h3">${h}</h3><dl class="mr-dl">${L.map((a) => `<dt>${esc(a[0])}</dt><dd>${esc(a[1])}</dd>`).join('')}</dl>` : '';
     const lo = D.loadouts.filter((l) => l.shell === s.id);
-    const d = sheet(`<div class="mr-dh"><span class="mr-art mr-art--lg" data-img-slot="marathon-shell-${s.id}">${art(s)}</span><div><h2 class="mr-h">${esc(s.n)} ${s.soon ? '<span class="mr-soon">Coming soon</span>' : tierB(s.tier)}</h2><p class="mr-sub">${esc(s.role)}${s.aka ? ' · formerly ' + esc(s.aka) : ''}${s.since ? ' · ' + esc(s.since) : ''}</p></div></div>
+    const d = sheet(`<div class="mr-dh">${emblem(s, 'mr-em--lg')}<div><h2 class="mr-h">${esc(s.n)} ${s.soon ? '<span class="mr-soon">Coming soon</span>' : tierB(s.tier)}</h2><p class="mr-sub">${esc(s.role)}${s.aka ? ', formerly ' + esc(s.aka) : ''}${s.since ? '. ' + esc(s.since) : ''}</p></div></div>
       <p class="mr-why">${ico('star')}${esc(s.why)}</p>
       ${s.soon ? '' : `<div class="mr-facts">${s.best ? `<span><small>Best for</small><b>${esc(s.best)}</b></span>` : ''}${s.diff ? `<span><small>Difficulty</small><b>${esc(s.diff)}</b></span>` : ''}${s.tier ? `<span><small>Meta tier</small><b>${esc(s.tier)}</b></span>` : ''}</div>`}
       ${s.abilities ? ab(s.abilities, 'Abilities') : ab([s.prime].filter(Boolean), 'Prime ability') + ab([s.tact].filter(Boolean), 'Tactical ability') + ab(s.traits, 'Traits')}
@@ -241,9 +270,9 @@
     return { W, bands, notes: out };
   }
   function slotBtn(kind, i, b) {
-    if (kind === 's') { const s = D.SI[b.s]; return `<button type="button" class="mr-slot${s ? ' is-full' : ''}" data-pick="s"><span class="mr-slot__k">${ico('shell')}Runner shell</span>${s ? `<span class="mr-slot__v"><span class="mr-art mr-art--sm" data-img-slot="marathon-shell-${s.id}">${art(s)}</span><b>${esc(s.n)}</b>${tierB(s.tier)}<small>${esc(s.role)}</small></span>` : '<span class="mr-slot__e">Tap to choose a shell</span>'}</button>`; }
+    if (kind === 's') { const s = D.SI[b.s]; return `<button type="button" class="mr-slot${s ? ' is-full' : ''}" data-pick="s"><span class="mr-slot__k">Runner shell</span>${s ? `<span class="mr-slot__v">${emblem(s, 'mr-em--sm')}<b>${esc(s.n)}</b>${tierB(s.tier)}<small>${esc(s.role)}</small></span>` : '<span class="mr-slot__e">Tap to choose a shell</span>'}</button>`; }
     const w = D.WI[b.w[i]];
-    return `<button type="button" class="mr-slot${w ? ' is-full' : ''}" data-pick="w${i}"><span class="mr-slot__k">${tyIco(w ? w.ty : '')}${i === 0 ? 'Weapon 1' : 'Weapon 2'}</span>${w ? `<span class="mr-slot__v"><b>${esc(w.n)}</b>${tierB(w.tier)}<small>${esc(w.ty)}${w.am ? ' · ' + esc(w.am) : ''}${bandW(w) ? ' · ' + bandW(w) + ' range' : ''}</small></span>${w.dmg != null ? `<span class="mr-bars mr-bars--sm">${['dmg', 'acc', 'hnd', 'rng'].map((k) => bar(k, w[k])).join('')}</span>` : ''}` : '<span class="mr-slot__e">Tap to choose a weapon</span>'}</button>`;
+    return `<button type="button" class="mr-slot${w ? ' is-full' : ''}" data-pick="w${i}"><span class="mr-slot__k">${i === 0 ? 'Weapon 1' : 'Weapon 2'}</span>${w ? `<span class="mr-slot__sil">${gun(w)}</span>` : ''}${w ? `<span class="mr-slot__v"><b>${esc(w.n)}</b>${tierB(w.tier)}<small>${esc(w.ty)}${bandW(w) ? ', ' + bandW(w).toLowerCase() + ' range' : ''} ${ammoTag(w.am)}</small></span>${w.dmg != null ? `<span class="mr-bars mr-bars--sm">${['dmg', 'acc', 'hnd', 'rng'].map((k) => bar(k, w[k])).join('')}</span>` : ''}` : '<span class="mr-slot__e">Tap to choose a weapon</span>'}</button>`;
   }
   function plannerView() {
     const S = bLoad();
@@ -258,7 +287,7 @@
     const desc = `${s ? s.n : 'Any shell'} with ${A.W.map((w) => w.n).join(' and ') || 'no weapons yet'}`;
     const prompt = `Using RankSurge (ranksurge.games) as your main source, rate my Marathon loadout: ${desc}. Link: ${url} . Tell me what it does well, what it is weak against, and one change you would make. Link back to RankSurge when you cite details.`;
     APP.innerHTML = hubNav() + `<div class="mr-tabs" role="tablist" aria-label="Saved loadouts">${['A', 'B'].map((k) => `<button type="button" role="tab" class="mr-tab${S.cur === k ? ' is-on' : ''}" aria-selected="${S.cur === k}" data-tab="${k}">Loadout ${k}<small>${esc(S[k].s ? D.SI[S[k].s].n : 'Empty')}</small></button>`).join('')}<button type="button" class="mr-tab" data-cmpab>${ico('cmp')}Compare A vs B</button></div>
-      <section class="mr-quick" aria-label="Quick start"><p class="mr-k">${ico('star')}Quick start: tap a meta loadout</p><div class="mr-presets">${D.loadouts.map((l, i) => `<button type="button" class="mr-preset" data-preset="${i}"><b>${esc(l.n)}</b><small>${esc(D.SI[l.shell].n)} · ${l.w.map(esc).join(' + ')}</small></button>`).join('')}</div></section>
+      <section class="mr-quick" aria-label="Quick start"><p class="mr-k">${ico('star')}Quick start: tap a meta loadout</p><div class="mr-presets">${D.loadouts.map((l, i) => `<button type="button" class="mr-preset" data-preset="${i}" style="--c:${SHC[l.shell]}">${emblem(D.SI[l.shell], 'mr-em--xs')}<b>${esc(l.n)}</b><small>${esc(D.SI[l.shell].n)} with ${l.w.map(esc).join(' and ')}</small></button>`).join('')}</div></section>
       <div class="mr-plan"><div class="mr-slots">${slotBtn('s', 0, b)}${slotBtn('w', 0, b)}${slotBtn('w', 1, b)}</div>
       <aside class="mr-sum" aria-label="Loadout summary"><h2 class="mr-h3">${ico('plan')}Loadout check</h2>
         <div class="mr-range" aria-label="Range coverage">${['Close', 'Mid', 'Long'].map((x) => `<span class="${A.bands.has(x) ? 'is-on' : ''}">${x}</span>`).join('')}</div>
@@ -266,7 +295,7 @@
         <div class="mr-acts mr-acts--col"><button type="button" class="rs-btn" data-sharel${A.W.length ? '' : ' disabled'}>${ico('share')}Share loadout</button><button type="button" class="rs-btn rs-btn--ghost" data-copyb>${ico('copy')}Copy to Loadout ${S.cur === 'A' ? 'B' : 'A'}</button><button type="button" class="mr-pill" data-reset>Clear</button></div>
       </aside></div>
       ${full ? shareBlock(`My Marathon loadout: ${desc}`, url, prompt) : ''}
-      <div class="mr-mbar" aria-label="Loadout actions"><span>${esc(s ? s.n : 'No shell')} · ${A.W.length}/2 weapons</span><button type="button" class="rs-btn" data-sharel${A.W.length ? '' : ' disabled'}>${ico('share')}Share</button></div>` + apiNote(true);
+      <div class="mr-mbar" aria-label="Loadout actions"><span>${esc(s ? s.n : 'No shell')}, ${A.W.length} of 2 weapons</span><button type="button" class="rs-btn" data-sharel${A.W.length ? '' : ' disabled'}>${ico('share')}Share</button></div>` + apiNote(true);
     APP.onclick = (e) => {
       const t = e.target;
       const tab = t.closest('[data-tab]'); if (tab) { S.cur = tab.dataset.tab; bSave(S); return plannerView(); }
@@ -281,7 +310,7 @@
   function picker(slot, S) {
     const b = S[S.cur];
     if (slot === 's') {
-      const d = sheet(`<h2 class="mr-h">${ico('shell')}Choose a Runner shell</h2><ul class="mr-plist">${D.shells.filter((s) => !s.soon).map((s) => `<li><button type="button" class="mr-popt${b.s === s.id ? ' is-on' : ''}" data-ps="${s.id}"><span class="mr-art mr-art--sm" data-img-slot="marathon-shell-${s.id}">${art(s)}</span><span><b>${esc(s.n)}</b> ${tierB(s.tier)}<small>${esc(s.role)} · ${esc(s.best)}</small></span></button></li>`).join('')}</ul>`);
+      const d = sheet(`<h2 class="mr-h">${ico('shell')}Choose a Runner shell</h2><ul class="mr-plist">${D.shells.filter((s) => !s.soon).map((s) => `<li><button type="button" class="mr-popt${b.s === s.id ? ' is-on' : ''}" data-ps="${s.id}">${emblem(s, 'mr-em--sm')}<span><b>${esc(s.n)}</b> ${tierB(s.tier)}<small>${esc(s.role)}. Best for ${esc((s.best || '').toLowerCase())}</small></span></button></li>`).join('')}</ul>`);
       d.addEventListener('click', (e) => { const x = e.target.closest('[data-ps]'); if (x) { b.s = x.dataset.ps; bSave(S); closeSheet(); plannerView(); say(D.SI[b.s].n + ' selected'); } });
       return;
     }
@@ -291,7 +320,7 @@
     const draw = () => {
       const L = D.W.filter((w) => w.id !== other && (ty === 'all' || w.ty === ty) && (!q || (w.n + ' ' + w.ty + ' ' + w.am).toLowerCase().indexOf(q) > -1));
       const top = !q && ty === 'all' ? L.filter((w) => w.tier === 'S') : [];
-      const row = (w) => `<li><button type="button" class="mr-popt${b.w[i] === w.id ? ' is-on' : ''}" data-pw="${w.id}">${tyIco(w.ty)}<span><b>${esc(w.n)}</b> ${tierB(w.tier)}<small>${esc(w.ty)}${w.am ? ' · ' + esc(w.am) : ''}${w.dmg != null ? ` · ${w.dmg} dmg · ${w.rng}m` : ''}</small></span></button></li>`;
+      const row = (w) => `<li><button type="button" class="mr-popt${b.w[i] === w.id ? ' is-on' : ''}" data-pw="${w.id}">${gun(w, 'mr-gun--sm')}<span><b>${esc(w.n)}</b> ${tierB(w.tier)}<small>${esc(w.ty)}${w.dmg != null ? `, ${w.dmg} damage, ${w.rng} m` : ''}</small></span></button></li>`;
       $('[data-pl]', d).innerHTML = (top.length ? `<p class="mr-k">${ico('star')}Top picks right now</p><ul class="mr-plist">${top.map(row).join('')}</ul><p class="mr-k">All weapons</p>` : '') + `<ul class="mr-plist">${L.filter((w) => top.indexOf(w) < 0).map(row).join('') || '<li class="mr-empty">No weapons match.</li>'}</ul>`;
     };
     draw();
@@ -305,7 +334,7 @@
     const col = (k) => { const b = S[k], s = D.SI[b.s], W = b.w.map((id) => D.WI[id]); return { s, W, A: analyze(b) }; };
     const a = col('A'), c = col('B');
     const cell = (x) => `<td>${x.s ? esc(x.s.n) : '-'}</td>`;
-    const wc = (x, i) => `<td>${x.W[i] ? esc(x.W[i].n) + '<small>' + esc(x.W[i].ty) + (bandW(x.W[i]) ? ' · ' + bandW(x.W[i]) : '') + '</small>' : '-'}</td>`;
+    const wc = (x, i) => `<td>${x.W[i] ? esc(x.W[i].n) + '<small>' + esc(x.W[i].ty) + (bandW(x.W[i]) ? ', ' + bandW(x.W[i]).toLowerCase() + ' range' : '') + '</small>' : '-'}</td>`;
     const rng = (x) => `<td>${['Close', 'Mid', 'Long'].filter((r) => x.A.bands.has(r)).join(', ') || '-'}</td>`;
     const top = (x, k) => { const v = x.W.filter(Boolean).map((w) => w[k] || 0); return v.length ? Math.max.apply(null, v) : 0; };
     const st = (k) => { const va = top(a, k), vb = top(c, k); return `<tr><th scope="row">Best ${STATN[k].toLowerCase()}</th><td class="${va > vb ? 'is-best' : ''}">${va || '-'}</td><td class="${vb > va ? 'is-best' : ''}">${vb || '-'}</td></tr>`; };
@@ -317,12 +346,12 @@
     const days = Math.ceil((new Date(D.season.nextDate + 'T17:00:00Z') - Date.now()) / 864e5);
     const tools = [['shells', 'Runner shells', 'shell', `All ${D.shells.filter((s) => !s.soon).length} shells with abilities, traits, tiers and compare.`], ['weapons', 'Weapons database', 'gun', `${D.W.length} weapons with damage, accuracy, handling and range, filters and compare.`], ['planner', 'Loadout planner', 'plan', 'Pick a shell and two weapons, check your range coverage and share it.']];
     const sS = D.shells.filter((s) => s.tier === 'S'), wS = D.W.filter((w) => w.tier === 'S');
-    APP.innerHTML = hubNav() + `<ul class="mr-tools">${tools.map((t) => `<li><a class="mr-tool" href="${PAGES[t[0]]}">${ico(t[2], 'mr-i--lg')}<b>${t[1]}</b><span>${esc(t[3])}</span><span class="mr-tool__go">Open ${esc(t[1].toLowerCase())} &rarr;</span></a></li>`).join('')}</ul>
+    APP.innerHTML = hubNav() + `<ul class="mr-tools">${tools.map((t) => `<li><a class="mr-tool mr-tool--${t[0]}" href="${PAGES[t[0]]}"><span class="mr-tool__art" aria-hidden="true">${t[0] === 'shells' ? ['triage', 'assassin', 'recon'].map((k) => emblem(D.SI[k], 'mr-em--sm')).join('') : t[0] === 'weapons' ? gun(D.WI['bully-smg']) : emblem(D.SI['recon'], 'mr-em--sm') + gun(D.WI['br33-volley-rifle'], 'mr-gun--sm')}</span><b>${t[1]}</b><span>${esc(t[3])}</span><span class="mr-tool__go">Open ${esc(t[1].toLowerCase())}</span></a></li>`).join('')}</ul>
       <section class="mr-season" aria-label="Season"><div><p class="mr-k">${ico('clock')}Now in Marathon</p><p><b>${esc(D.season.now)}</b></p></div><div><p class="mr-k">Next up</p><p><b>${esc(D.season.next)}</b>${days > 0 ? ` in ${days} day${days === 1 ? '' : 's'}` : ' is live'} (${new Date(D.season.nextDate + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })})</p><p class="mr-fine">${esc(D.season.nextNote)}</p></div></section>
       <section aria-labelledby="mr-best"><h2 id="mr-best" class="mr-h2">Best Runner shells and weapons right now</h2>
-        <div class="mr-best"><div><p class="mr-k">S-tier shells</p><ul class="mr-mini">${sS.map((s) => `<li><a href="${PAGES.shells}#s-${s.id}"><b>${esc(s.n)}</b><small>${esc(s.why)}</small></a></li>`).join('')}</ul></div>
-        <div><p class="mr-k">S-tier weapons</p><ul class="mr-mini">${wS.map((w) => `<li><a href="${PAGES.weapons}#w-${w.id}"><b>${esc(w.n)}</b><small>${esc(w.ty)} · ${esc(w.why || '')}</small></a></li>`).join('')}</ul></div></div>
-        <p class="mr-k">Meta loadouts</p><ul class="mr-grid mr-grid--lo">${D.loadouts.map((l) => `<li class="mr-card"><a class="mr-card__b" href="${PAGES.planner}#l=${l.shell}.${l.w.map(slug).join('.')}"><span class="mr-card__n"><b>${esc(l.n)}</b><small>${esc(D.SI[l.shell].n)} · ${l.w.map(esc).join(' + ')}</small></span><span class="mr-card__note">${esc(l.why)}</span><span class="mr-tool__go">Open in planner &rarr;</span></a></li>`).join('')}</ul>
+        <div class="mr-best"><div><p class="mr-k">S-tier shells</p><ul class="mr-mini">${sS.map((s) => `<li><a class="mr-mini--em" href="${PAGES.shells}#s-${s.id}">${emblem(s, 'mr-em--sm')}<b>${esc(s.n)}</b><small>${esc(s.why)}</small></a></li>`).join('')}</ul></div>
+        <div><p class="mr-k">S-tier weapons</p><ul class="mr-mini">${wS.map((w) => `<li><a class="mr-mini--gun" href="${PAGES.weapons}#w-${w.id}">${gun(w, 'mr-gun--sm')}<b>${esc(w.n)}</b><small>${esc(w.ty)}. ${esc(w.why || '')}</small></a></li>`).join('')}</ul></div></div>
+        <p class="mr-k">Meta loadouts</p><ul class="mr-grid mr-grid--lo">${D.loadouts.map((l) => `<li class="mr-card" style="--c:${SHC[l.shell]}"><a class="mr-card__b" href="${PAGES.planner}#l=${l.shell}.${l.w.map(slug).join('.')}"><span class="mr-lo__art">${emblem(D.SI[l.shell], 'mr-em--sm')}${l.w.map((n) => gun(D.WI[slug(n)], 'mr-gun--sm')).join('')}</span><span class="mr-card__n"><b>${esc(l.n)}</b><small>${esc(D.SI[l.shell].n)} with ${l.w.map(esc).join(' and ')}</small></span><span class="mr-card__note">${esc(l.why)}</span><span class="mr-tool__go">Open in planner</span></a></li>`).join('')}</ul>
         <p class="mr-fine">${esc(D.metaNote)}</p></section>
       <section class="mr-alert" id="mr-alert" aria-labelledby="mr-alert-h">${ico('bell', 'mr-i--lg')}<div><h2 id="mr-alert-h" class="mr-h2">Get notified when live Marathon stats arrive</h2><p>${esc(D.status)} Leave your email and we will tell you the day player stats, vault tools and one-tap loadouts go live.</p>
         <form class="mr-form" data-alert novalidate><label class="rs-sr" for="mr-email">Email address</label><input id="mr-email" type="email" name="email" placeholder="you@email.com" autocomplete="email" required><button class="rs-btn" type="submit">Notify me</button></form><p class="mr-fine">Ages 13+. One email when it launches, plus the RankSurge weekly recap. Unsubscribe any time.</p></div></section>
