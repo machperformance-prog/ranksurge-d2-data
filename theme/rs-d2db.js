@@ -281,7 +281,7 @@
     const pmax = {}; (D.meta.statOrder || KEY_STATS).forEach((k) => { const v = all.map((p) => p.s[k]).filter((x) => x != null); if (v.length > 1) pmax[k] = Math.max.apply(null, v); });
     const selected = w.pk.map(() => null);
     const frame = perk(w.fr);
-    const cols = w.pk.map((c, i) => `<div class="d2-col"><p class="d2-col__k">${esc(colName(c, i))}</p>${c.map((h) => { const p = perk(h); return `<button type="button" class="d2-perk${p.e ? ' is-enh' : ''}" data-col="${i}" data-perk="${h}" aria-pressed="false" title="${esc(p.n)}">${img(p.i, 36, '')}<span>${esc(p.n)}</span></button>`; }).join('')}</div>`).join('');
+    const cols = w.pk.map((c, i) => `<div class="d2-col"><p class="d2-col__k">${esc(colName(c, i, w.pk))}</p>${c.map((h) => { const p = perk(h); return `<button type="button" class="d2-perk${p.e ? ' is-enh' : ''}" data-col="${i}" data-perk="${h}" aria-pressed="false" title="${esc(p.n)}">${img(p.i, 36, '')}<span>${esc(p.n)}</span></button>`; }).join('')}</div>`).join('');
     const keyStats = (D.meta.statOrder || KEY_STATS).filter((k) => w.s[k] != null && NUM_STATS.indexOf(k) < 0 && !(D.meta.stats[k] && D.meta.stats[k].bar === 0));
     const ranks = keyStats.map((k) => { const r = rankIn(all, w, k); return r && r.n > 1 ? `<li><b>${esc(k)}</b> <span>#${r.r} of ${r.n}</span> <small>${w.s[k]} vs avg ${r.avg}, best ${r.max}</small></li>` : ''; }).join('');
     const best = keyStats.map((k) => ({ k, r: rankIn(all, w, k) })).filter((x) => x.r && x.r.n > 2);
@@ -321,8 +321,9 @@
       actions(e);
     });
   }
-  function colName(c, i) {
+  function colName(c, i, pk) {
     const cat = perk(c[0]) ? perk(c[0]).c : '';
+    if (/frames/i.test(cat) && pk) { const n = pk.slice(0, i + 1).filter((x) => perk(x[0]) && /frames/i.test(perk(x[0]).c)).length; return 'Trait ' + n; }
     if (/barrel|tubes|bowstring|blades|haft|scope/i.test(cat)) return 'Barrel / sight';
     if (/magazine|arrows|batter|guards/i.test(cat)) return 'Magazine';
     if (/frames/i.test(cat)) return i < 3 ? 'Trait ' + (i - 1) : 'Trait';
@@ -545,7 +546,7 @@
     let extra = '';
     if (kind === 'w' && it.r !== 'exotic') {
       const wp = b.wp[sl] || [];
-      extra = `<div class="d2-slot__opts">${it.pk.map((c, i) => c.length > 1 ? `<label class="d2-sel d2-sel--s"><span>${esc(colName(c, i))}</span><select name="wp-${sl}-${i}"><option value="">Any</option>${c.map((h) => `<option value="${h}"${wp[i] === h ? ' selected' : ''}>${esc(pn(h))}</option>`).join('')}</select></label>` : '').join('')}</div>`;
+      extra = `<div class="d2-slot__opts">${it.pk.map((c, i) => c.length > 1 ? `<label class="d2-sel d2-sel--s"><span>${esc(colName(c, i, it.pk))}</span><select name="wp-${sl}-${i}"><option value="">Any</option>${c.map((h) => `<option value="${h}"${wp[i] === h ? ' selected' : ''}>${esc(pn(h))}</option>`).join('')}</select></label>` : '').join('')}</div>`;
     }
     if (kind === 'w') { const ws = wStats(it, (b.wp[sl] || []).filter(Boolean)); extra += `<p class="d2-slot__st">${['Impact', 'Range', 'Stability', 'Handling', 'Reload Speed'].filter((k) => ws[k] != null).map((k) => `<span>${esc(k.replace(' Speed', ''))} <b>${ws[k]}</b></span>`).join('')}</p>`; }
     if (kind === 'a') {
