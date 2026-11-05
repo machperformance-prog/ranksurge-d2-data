@@ -1,0 +1,11 @@
+{%- comment -%} v75: Destiny 2 database tool. mode: weapons | armor | build | top. Data: daily build of Bungie's public manifest (GitHub machperformance-prog/ranksurge-d2-data, served by jsDelivr). The Bungie session for loadout saving is the vault manager's (same browser). {%- endcomment -%}
+{%- assign api = shop.metafields.ranksurge.stats_api_base.value | default: shop.metafields.ranksurge.stats_api_base -%}
+{{ 'rs-d2db.css' | asset_url | stylesheet_tag }}
+<section class="rsd2 g-destiny-2" id="rsd2" data-mode="{{ mode }}" data-cdn="https://cdn.jsdelivr.net/gh/machperformance-prog/ranksurge-d2-data@main/data/" data-api="{{ api | escape }}" aria-label="{% case mode %}{% when 'armor' %}Destiny 2 armor database{% when 'build' %}Destiny 2 build planner{% when 'top' %}Best Destiny 2 weapons and armor{% else %}Destiny 2 weapons database{% endcase %}">
+  <div class="rs-wrap">
+    <p class="d2-asof" data-d2-asof>Data from Bungie's Destiny 2 item database, rebuilt daily.</p>
+    <div data-d2-app><p class="d2-load">Loading the Destiny 2 database&hellip;</p><noscript><p>The Destiny 2 database needs JavaScript turned on.</p></noscript></div>
+    <span class="rs-sr" aria-live="polite" data-d2-live></span>
+  </div>
+</section>
+<script src="{{ 'rs-d2db.js' | asset_url }}" defer></script>

@@ -1,0 +1,9 @@
+{%- assign api = shop.metafields.ranksurge.stats_api_base.value | default: shop.metafields.ranksurge.stats_api_base -%}
+{%- if api != blank -%}
+{{ 'rs-vault.css' | asset_url | stylesheet_tag }}
+<section class="rsv g-destiny-2" id="rsv" data-api="{{ api | escape }}" aria-label="Destiny 2 vault manager">
+  <div class="rs-wrap"><div class="rsv-box" id="rsv-app"><p class="rsv-load">Loading the vault manager&hellip;</p><noscript><p>The vault manager needs JavaScript turned on.</p></noscript></div></div>
+</section>
+<script>/* v75: after Bungie sign-in started from the D2 build planner, keep the session and go back there. */(function(){try{var b=sessionStorage.getItem('rs_d2_back'),m=location.hash.match(/vs=(v1\.[A-Za-z0-9_-]+)/);if(!b||!m||!/^\/pages\/destiny-2-[a-z0-9-]+(\?[^#]*)?$/.test(b))return;var st=localStorage.getItem('rs_vault_remember')==='1'?localStorage:sessionStorage;st.setItem('rs_vault_s',JSON.stringify({s:m[1],t:Date.now()}));sessionStorage.removeItem('rs_d2_back');location.replace(b);}catch(e){}})();</script>
+<script src="{{ 'rs-vault.js' | asset_url }}" defer></script>
+{%- endif -%}

@@ -1,0 +1,178 @@
+{%- comment -%} Hero image order (v53): 1) page metafield custom.hero_image (file_reference, set per page in admin);
+  2) a Sidekick file named ranksurge-<page handle>-hero.png in Content > Files (images global lookup);
+  3) none: the CSS gradient hero. Sidekick sometimes renames files on save (e.g. adds a suffix), so if a file
+  does not show, check its exact name in Files or set the metafield instead. {%- endcomment -%}
+{%- liquid
+  assign hero = page.metafields.custom.hero_image.value
+  if hero == blank
+    assign hero_name = 'ranksurge-' | append: page.handle | append: '-hero.png'
+    assign hero = images[hero_name]
+  endif
+  # v69: built-in neon SVG heroes for the Fortnite pages (theme assets), used only when no metafield or Files image exists.
+  assign hero_svg = ''
+  if hero == blank and 'fortnite-stats,fortnite-item-shop,fortnite-leaderboard,fortnite-map,path-of-exile-2-stats,rust-stats,tf2-stats' contains page.handle
+    assign hero_svg = 'rs-hero-' | append: page.handle | append: '.svg'
+  endif
+-%}
+{%- assign sub = page.metafields.custom.subtitle.value -%}
+{%- assign hero_alt = page.metafields.custom.hero_alt.value | default: hero.alt | default: page.title -%}
+{%- liquid
+  assign hubs = 'valorant-stats:valorant,league-of-legends-stats:league-of-legends,cs2-stats:counter-strike-2,deadlock-stats:deadlock,destiny-2-stats:destiny-2,destiny-2-weapons:destiny-2,destiny-2-armor:destiny-2,destiny-2-build-planner:destiny-2,destiny-2-best-weapons-and-armor:destiny-2,marvel-rivals-stats:marvel-rivals,overwatch-2-stats:overwatch-2,dota-2-stats:dota-2,fortnite-stats:fortnite,fortnite-item-shop:fortnite,fortnite-leaderboard:fortnite,fortnite-map:fortnite,pubg-stats:pubg,tft-stats:tft,wow-stats:wow,starcraft-2-stats:sc2,brawl-stars-stats:bs,clash-royale-stats:cr,clash-of-clans-stats:coc,world-of-tanks-stats:wot,chess-stats:chess,lichess-stats:lichess,osu-stats:osu,hypixel-stats:hypixel,world-of-warships-stats:wows,world-of-tanks-blitz-stats:wotb,path-of-exile-2-stats:poe2,rust-stats:rust,tf2-stats:tf2' | split: ','
+  assign hubg = ''
+  for h in hubs
+    assign pr = h | split: ':'
+    if pr[0] == page.handle
+      assign hubg = pr[1]
+    endif
+  endfor
+  assign body = page.content
+  if body contains 'rs-post__meta'
+    assign glist = 'Valorant:valorant,League of Legends:league-of-legends,Counter-Strike 2:counter-strike-2,Deadlock:deadlock,Destiny 2:destiny-2,Marvel Rivals:marvel-rivals,Overwatch 2:overwatch-2,Overwatch:overwatch-2,Dota 2:dota-2,Fortnite:fortnite,PUBG:pubg,Teamfight Tactics:tft,TFT:tft,World of Warcraft:wow,WoW:wow,StarCraft II:sc2,Brawl Stars:bs,Clash Royale:cr,Clash of Clans:coc,World of Tanks:wot,Chess.com:chess,Chess:chess,Lichess:lichess,osu!:osu,Hypixel:hypixel,Minecraft:hypixel,World of Warships:wows,World of Tanks Blitz:wotb,WoT Blitz:wotb,Path of Exile 2:poe2,PoE2:poe2,Rust:rust,Team Fortress 2:tf2,TF2:tf2' | split: ','
+    for gp in glist
+      assign kv = gp | split: ':'
+      assign gfrom = '<p class="rs-post__meta">' | append: kv[0] | append: '</p>'
+      assign gto = '<p class="rs-post__meta" data-g="' | append: kv[1] | append: '">' | append: kv[0] | append: '</p>'
+      assign body = body | replace: gfrom, gto
+    endfor
+  endif
+-%}
+<section class="rs-hero">
+  {%- if hero != blank -%}
+    {{ hero | image_url: width: 2400 | image_tag: class: 'rs-hero__img', widths: '640, 960, 1280, 1600, 1920, 2400', sizes: '100vw', loading: 'eager', fetchpriority: 'high', alt: hero_alt }}
+  {%- elsif hero_svg != '' -%}
+    <img class="rs-hero__img" src="{{ hero_svg | asset_url }}" alt="{{ hero_alt | escape }}" width="1600" height="640" loading="eager" fetchpriority="high">
+  {%- endif -%}
+  <div class="rs-wrap rs-hero__in">
+    <nav class="rs-crumbs" aria-label="Breadcrumb"><a href="/">Home</a> / <span aria-current="page">{{ page.title }}</span></nav>
+    <h1>{{ page.title }}</h1>
+    {%- if sub != blank -%}<p class="rs-hero__sub">{{ sub }}</p>{%- endif -%}
+  </div>
+</section>
+{% render 'rs-share' %}
+{%- comment -%} v54: guides-only hubs never show a lookup box. If the page body has no "Guides only" callout of its own, this honest notice is shown instead. {%- endcomment -%}
+{%- liquid
+  assign go_name = ''
+  case page.handle
+    when 'valorant-stats'
+      assign go_name = 'Valorant'
+      assign go_tag = 'valorant'
+      assign go_why = 'Riot only allows Valorant data for players who opt in, so there is no public Valorant player lookup.'
+    when 'overwatch-2-stats'
+      assign go_name = 'Overwatch 2'
+      assign go_tag = 'overwatch-2'
+      assign go_why = 'Blizzard has no official public Overwatch stats API, so there is no Overwatch 2 player lookup.'
+    when 'marvel-rivals-stats'
+      assign go_name = 'Marvel Rivals'
+      assign go_tag = 'marvel-rivals'
+      assign go_why = 'NetEase has no official Marvel Rivals API, so there is no Marvel Rivals player lookup.'
+  endcase
+-%}
+{%- if go_name != '' and page.content contains 'Guides only' -%}{%- assign go_name = '' -%}{%- endif -%}
+{%- if go_name != '' -%}
+<div class="rs-wrap"><div class="rs-callout rs-callout--soon rs-guideonly" role="note"><p><strong>{{ go_name }} is guides only on RankSurge.</strong> {{ go_why }} You get rank guides, stat explainers and climbing guides instead.</p><p class="rs-pend__cta"><a class="rs-btn" href="/blogs/news/tagged/{{ go_tag }}">Read the {{ go_name }} guides</a> <a class="rs-btn rs-btn--ghost" href="/pages/ranks-explained">All ranks explained</a> <a class="rs-btn rs-btn--ghost" href="/pages/player-lookup">Games with live lookups</a></p></div></div>
+{%- endif -%}
+{% render 'rs-ad-slot', placement: 'sponsor' %}
+{% render 'rs-ad-slot', placement: 'banner' %}
+{%- for block in section.blocks -%}
+  {%- if block.type == 'dashboard' -%}{% render 'rs-dashboard' %}{%- endif -%}
+  {%- if block.type == 'lookup' -%}{%- unless 'valorant-stats,overwatch-2-stats,marvel-rivals-stats' contains page.handle -%}{% render 'rs-lookup' %}{%- endunless -%}{%- endif -%}
+  {%- if block.type == 'contact' -%}
+    <section class="rs-look" aria-labelledby="rs-cf-h"><div class="rs-wrap"><div class="rs-look__box">
+      <h2 id="rs-cf-h" class="rs-look__h">Send us a message</h2>
+      {%- form 'contact', class: 'rs-form' -%}
+        {%- if form.posted_successfully? -%}<p class="rs-ok" role="status">Thanks. We got your message and will reply by email.</p>{%- endif -%}
+        {%- if form.errors -%}<p class="rs-err" role="alert">{{ form.errors | default_errors }}</p>{%- endif -%}
+        <div class="rs-form__row"><label for="cf-name">Name</label><input id="cf-name" name="contact[name]" autocomplete="name" value="{{ form.name }}"></div>
+        <div class="rs-form__row"><label for="cf-email">Email</label><input id="cf-email" type="email" name="contact[email]" autocomplete="email" required value="{{ form.email }}"></div>
+        <div class="rs-form__row"><label for="cf-topic">Topic</label><select id="cf-topic" name="contact[topic]"><option>General question</option><option>Data or profile issue</option><option>Privacy or data deletion</option><option>Partnerships</option></select></div>
+        <div class="rs-form__row"><label for="cf-msg">Message</label><textarea id="cf-msg" name="contact[body]" rows="6" required>{{ form.body }}</textarea></div>
+        <button class="rs-btn" type="submit">Send message</button>
+      {%- endform -%}
+    </div></div></section>
+  {%- endif -%}
+{%- endfor -%}
+{%- if page.handle == 'destiny-2-stats' -%}{% render 'rs-d2-profile' %}{%- endif -%}
+{%- if page.handle == 'deadlock-stats' -%}{% render 'rs-dl-profile' %}{%- endif -%}
+{%- if page.handle == 'compare-players' -%}{% render 'rs-compare', pro_key: section.settings.pro_pass_key, ts_key: section.settings.turnstile_site_key %}{%- endif -%}
+{%- if page.handle == 'destiny-2-vault-manager' -%}{% render 'rs-d2-vault' %}{%- endif -%}
+{%- comment -%} v75: Destiny 2 weapon and armor database, build planner and best gear (assets/rs-d2db.js, data from github.com/machperformance-prog/ranksurge-d2-data). {%- endcomment -%}
+{%- case page.handle -%}
+  {%- when 'destiny-2-weapons' -%}{% render 'rs-d2-db', mode: 'weapons' %}
+  {%- when 'destiny-2-armor' -%}{% render 'rs-d2-db', mode: 'armor' %}
+  {%- when 'destiny-2-build-planner' -%}{% render 'rs-d2-db', mode: 'build' %}
+  {%- when 'destiny-2-best-weapons-and-armor' -%}{% render 'rs-d2-db', mode: 'top' %}
+{%- endcase -%}
+{%- if page.handle == 'pro' -%}{% render 'rs-pro' %}{%- endif -%}
+{%- if page.handle == 'cs2-stats' -%}{% render 'rs-cs2-profile' %}{%- endif -%}
+{%- if page.handle == 'dota-2-stats' -%}{% render 'rs-dota-profile' %}{%- endif -%}
+{%- if page.handle == 'fortnite-stats' -%}{% render 'rs-fn-tools', t: 'nav' %}{% render 'rs-fn-profile' %}{% render 'rs-fn-tools', t: 'h2h', ts_key: section.settings.turnstile_site_key %}{%- endif -%}
+{%- comment -%} v68: Fortnite tool pages (Worker v25). {%- endcomment -%}
+{%- if page.handle == 'fortnite-item-shop' -%}{% render 'rs-fn-tools', t: 'shop', ts_key: section.settings.turnstile_site_key %}{%- endif -%}
+{%- if page.handle == 'fortnite-leaderboard' -%}{% render 'rs-fn-tools', t: 'board', ts_key: section.settings.turnstile_site_key %}{% render 'rs-fn-tools', t: 'h2h', ts_key: section.settings.turnstile_site_key %}{%- endif -%}
+{%- if page.handle == 'fortnite-map' -%}{% render 'rs-fn-tools', t: 'map', ts_key: section.settings.turnstile_site_key %}{%- endif -%}
+{%- if page.handle == 'pubg-stats' -%}{% render 'rs-pubg-profile' %}{%- endif -%}
+{%- if page.handle == 'league-of-legends-stats' -%}{% render 'rs-lol-profile' %}{%- endif -%}
+{%- if page.handle == 'tft-stats' -%}{% render 'rs-tft-profile' %}{%- endif -%}
+{%- if page.handle == 'wow-stats' -%}{% render 'rs-wow-profile' %}{%- endif -%}
+{%- if page.handle == 'wow-leaderboards' -%}{% render 'rs-wow-lb' %}{%- endif -%}
+{%- if page.handle == 'starcraft-2-stats' -%}{% render 'rs-sc2-profile' %}{%- endif -%}
+{%- if page.handle == 'brawl-stars-stats' -%}{% render 'rs-bs-profile' %}{%- endif -%}
+{%- if page.handle == 'clash-royale-stats' -%}{% render 'rs-cr-profile' %}{%- endif -%}
+{%- if page.handle == 'clash-of-clans-stats' -%}{% render 'rs-coc-profile' %}{%- endif -%}
+{%- if page.handle == 'world-of-tanks-stats' -%}{% render 'rs-wot-profile' %}{%- endif -%}
+{%- if page.handle == 'chess-stats' -%}{% render 'rs-chess-profile' %}{%- endif -%}
+{%- if page.handle == 'lichess-stats' -%}{% render 'rs-xg-profile', g: 'lichess' %}{%- endif -%}
+{%- if page.handle == 'osu-stats' -%}{% render 'rs-xg-profile', g: 'osu' %}{%- endif -%}
+{%- if page.handle == 'hypixel-stats' -%}{% render 'rs-xg-profile', g: 'hypixel' %}{%- endif -%}
+{%- if page.handle == 'world-of-warships-stats' -%}{% render 'rs-xg-profile', g: 'wows' %}{%- endif -%}
+{%- if page.handle == 'world-of-tanks-blitz-stats' -%}{% render 'rs-xg-profile', g: 'wotb' %}{%- endif -%}
+{%- if page.handle == 'rust-stats' -%}{% render 'rs-xg-profile', g: 'rust' %}{%- endif -%}
+{%- if page.handle == 'tf2-stats' -%}{% render 'rs-xg-profile', g: 'tf2' %}{%- endif -%}
+{%- if page.handle == 'cs2-inventory-value' -%}{% render 'rs-cs2-inv' %}{%- endif -%}
+{%- if page.handle == 'player-hub' -%}{% render 'rs-hub' %}{%- endif -%}
+{%- if page.handle == 'compare-players' -%}<script src="{{ 'rs-hub-writers.js' | asset_url }}" defer></script>{%- endif -%}
+{%- assign ptp = 'deadlock-stats,cs2-stats,dota-2-stats,destiny-2-stats,fortnite-stats,pubg-stats,league-of-legends-stats,tft-stats,wow-stats,starcraft-2-stats,brawl-stars-stats,clash-royale-stats,clash-of-clans-stats,world-of-tanks-stats,chess-stats,lichess-stats,osu-stats,hypixel-stats,world-of-warships-stats,world-of-tanks-blitz-stats,rust-stats,tf2-stats' | split: ',' -%}
+{%- if ptp contains page.handle -%}<script src="{{ 'rs-prof-tools.js' | asset_url }}" defer></script>{% render 'rs-pdash', pro_key: section.settings.pro_pass_key, ts_key: section.settings.turnstile_site_key %}{%- endif -%}
+<div class="rs-body{% if hubg != '' %} rs-hubpage g-{{ hubg }}{% endif %}">
+  <article class="rs">{{ body }}{%- if page.handle == 'advertise' -%}{% render 'rs-blogpkgs' %}{%- endif -%}</article>
+</div>
+{%- liquid
+  # v53: Ask RankSurge AI coach (Worker v19 /v1/help) on game pages, pages with custom.about_game, game tool pages and the Player Hub.
+  assign help_on = false
+  assign help_g = hubg
+  if hubg != ''
+    assign help_on = true
+  endif
+  if page.metafields.custom.about_game.value != blank
+    assign help_on = true
+    if help_g == ''
+      assign help_g = page.metafields.custom.about_game.value
+    endif
+  endif
+  case page.handle
+    when 'wow-leaderboards'
+      assign help_on = true
+      assign help_g = 'wow'
+    when 'dota-2-hero-tier-list'
+      assign help_on = true
+      assign help_g = 'dota-2'
+    when 'cs2-inventory-value', 'cs2-pro-comparisons'
+      assign help_on = true
+      assign help_g = 'cs2'
+    when 'destiny-2-vault-manager'
+      assign help_on = true
+      assign help_g = 'destiny-2'
+    when 'player-hub'
+      assign help_on = true
+      assign help_g = ''
+  endcase
+-%}
+{%- if help_on -%}{% render 'rs-help', g: help_g, pro_key: section.settings.pro_pass_key, ts_key: section.settings.turnstile_site_key %}{%- endif -%}
+{%- if hubg != '' -%}{% render 'rs-hub-cards', g: hubg %}{%- endif -%}
+{%- assign norel = 'privacy-policy,terms-of-service,refund-policy,subscription-policy,advertising-terms,advertising-policy,legal-notices,contact,advertiser-dashboard,data-sharing-opt-out,advertise,pro,player-hub' | split: ',' -%}
+{%- unless norel contains page.handle -%}{% render 'rs-related-posts' %}{%- endunless -%}
+{% render 'rs-ad-slot', placement: 'featured' %}
+{% render 'rs-ad-slot', placement: 'spotlight' %}
+{% schema %}
+{"name":"RankSurge page","blocks":[{"type":"lookup","name":"Player lookup tool","limit":1},{"type":"contact","name":"Contact form","limit":1},{"type":"dashboard","name":"Advertiser dashboard","limit":1}],"settings":[{"type":"header","content":"RankSurge Pro"},{"type":"text","id":"pro_pass_key","label":"Pro pass key","info":"Paste the same value you saved as the Worker secret RS_PASS_SECRET. It never appears on the storefront. Leave blank to turn Pro unlimited AI picks off."},{"type":"header","content":"Bot protection"},{"type":"text","id":"turnstile_site_key","label":"Cloudflare Turnstile site key","info":"The public site key from Cloudflare Turnstile. Put the matching secret key in the Worker as TURNSTILE_SECRET. Leave blank to turn the human check off."}]}
+{% endschema %}
