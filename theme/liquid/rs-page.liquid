@@ -101,6 +101,10 @@
   {%- when 'destiny-2-armor' -%}{% render 'rs-d2-db', mode: 'armor' %}
   {%- when 'destiny-2-build-planner' -%}{% render 'rs-d2-db', mode: 'build' %}
   {%- when 'destiny-2-best-weapons-and-armor' -%}{% render 'rs-d2-db', mode: 'top' %}
+  {%- when 'marathon-stats' -%}{% render 'rs-mara', mode: 'hub' %}
+  {%- when 'marathon-runner-shells' -%}{% render 'rs-mara', mode: 'shells' %}
+  {%- when 'marathon-weapons' -%}{% render 'rs-mara', mode: 'weapons' %}
+  {%- when 'marathon-loadout-planner' -%}{% render 'rs-mara', mode: 'planner' %}
 {%- endcase -%}
 {%- if page.handle == 'pro' -%}{% render 'rs-pro' %}{%- endif -%}
 {%- if page.handle == 'cs2-stats' -%}{% render 'rs-cs2-profile' %}{%- endif -%}

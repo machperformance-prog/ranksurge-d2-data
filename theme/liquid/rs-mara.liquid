@@ -1,0 +1,10 @@
+{%- comment -%} v80: Marathon tools. mode: hub | shells | weapons | planner. Data: data/marathon.json in GitHub machperformance-prog/ranksurge-d2-data (curated by the RankSurge team, served by jsDelivr). Bungie has no public Marathon API yet, so nothing here signs in. Shell art: add "img" URLs to marathon.json (Sidekick images) and they replace the SVG placeholders. {%- endcomment -%}
+{{ 'rs-mara.css' | asset_url | stylesheet_tag }}
+<section class="rsmr g-marathon" id="rsmr" data-mode="{{ mode }}" data-cdn="https://cdn.jsdelivr.net/gh/machperformance-prog/ranksurge-d2-data@main/data/" aria-label="{% case mode %}{% when 'shells' %}Marathon Runner shells{% when 'weapons' %}Marathon weapons database{% when 'planner' %}Marathon loadout planner{% else %}Marathon hub{% endcase %}">
+  <div class="rs-wrap">
+    <p class="mr-asof" data-mr-asof>Marathon data checked by the RankSurge team.</p>
+    <div data-mr-app><p class="mr-load">Loading the Marathon database&hellip;</p><noscript><p>The Marathon tools need JavaScript turned on.</p></noscript></div>
+    <span class="rs-sr" aria-live="polite" data-mr-live></span>
+  </div>
+</section>
+<script src="{{ 'rs-mara.js' | asset_url }}" defer></script>
