@@ -30,7 +30,7 @@
 
   /* ---------- helpers ---------- */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-  const img = (p, w, alt, cls) => (p ? `<img src="${BN}${esc(p)}" width="${w}" height="${w}" alt="${esc(alt || '')}" loading="lazy" decoding="async"${cls ? ` class="${cls}"` : ''}>` : '');
+  const img = (p, w, alt, cls) => (p ? `<img src="${BN}${esc(p)}" width="${w}" height="${w}" style="width:${w}px;height:${w}px;max-width:none" alt="${esc(alt || '')}" loading="lazy" decoding="async"${cls ? ` class="${cls}"` : ''}>` : '');
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const perk = (h) => P[h] || null;
@@ -168,8 +168,8 @@
   function tile(it, kind) {
     const ex = it.r === 'exotic';
     const sub = kind === 'w' ? `${esc(it.ty)} · ${elemBadge(it.el)}` : `${esc(CLSN[it.cl] || '')} · ${esc(SLOTN[it.sl] || it.ty)}`;
-    const extra = kind === 'w' ? `<span class="d2-card__k">${esc(it.frn || '')}${it.rpm ? ` · ${it.rpm} ${it.s['Charge Time'] && it.rpm === it.s['Charge Time'] ? 'ms' : it.s['Draw Time'] && it.rpm === it.s['Draw Time'] ? 'ms' : 'RPM'}` : ''}</span>` : `<span class="d2-card__k">${it.ex ? esc(pn(it.ex)) : it.set && D.sets[it.set] ? esc(D.sets[it.set].n) + ' set' : esc(it.ty)}</span>`;
-    const isNew = rel(it.rel) && rel(it.rel) >= D.newest - 1;
+    const extra = kind === 'w' ? `<span class="d2-card__k">${esc(it.frn || '')}${rpmTxt(it)}</span>` : `<span class="d2-card__k">${it.ex ? esc(pn(it.ex)) : it.set && D.sets[it.set] ? esc(D.sets[it.set].n) + ' set' : esc(it.ty)}</span>`;
+    const isNew = false;
     return `<button type="button" class="d2-card${ex ? ' is-exotic' : ''}" data-open="${kind}${it.h}"><span class="d2-card__img">${img(it.ic, 72, '')}${it.wm ? img(it.wm, 72, '', 'd2-wm') : ''}</span><span class="d2-card__t"><b>${esc(it.n)}${it.ad ? ' <small>(Adept)</small>' : ''}</b><span class="d2-card__s">${sub}</span>${extra}</span>${isNew ? '<span class="d2-new">New</span>' : ''}</button>`;
   }
 
@@ -296,6 +296,7 @@
     if (/stocks|grips/i.test(cat)) return 'Grip / stock';
     return 'Column ' + (i + 1);
   }
+  function rpmTxt(w) { const s = w.s; if (s['Rounds Per Minute']) return ` · ${s['Rounds Per Minute']} RPM`; if (s['Draw Time'] && /bow/i.test(w.ty)) return ` · ${s['Draw Time']} ms draw`; if (s['Charge Time'] && /fusion/i.test(w.ty)) return ` · ${s['Charge Time']} ms charge`; return ''; }
   function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : ''; }
 
   /* ---------- armor detail ---------- */
@@ -399,7 +400,7 @@
   /* ---------- best gear (data-driven + curated) ---------- */
   function topView() {
     const leg = D.W.filter((w) => w.r === 'legendary' && !w.ad);
-    const newestW = D.W.filter((w) => !w.ad && rel(w.rel) >= D.newest - 1).sort((a, b) => (b.r === 'exotic') - (a.r === 'exotic') || a.n.localeCompare(b.n));
+    const newestW = D.W.filter((w) => !w.ad && rel(w.rel) >= D.newest).sort((a, b) => (b.r === 'exotic') - (a.r === 'exotic') || a.n.localeCompare(b.n));
     const newestA = D.A.filter((a) => a.r === 'exotic' && rel(a.rel) >= D.newest - 2);
     const CAT = [['Hand Cannon', 'Range'], ['Auto Rifle', 'Stability'], ['Pulse Rifle', 'Range'], ['Scout Rifle', 'Range'], ['Submachine Gun', 'Handling'], ['Sidearm', 'Range'], ['Shotgun', 'Range'], ['Sniper Rifle', 'Aim Assistance'], ['Fusion Rifle', 'Range'], ['Grenade Launcher', 'Blast Radius'], ['Rocket Launcher', 'Blast Radius'], ['Linear Fusion Rifle', 'Range'], ['Machine Gun', 'Range'], ['Sword', 'Impact'], ['Bow', 'Accuracy'], ['Glaive', 'Range'], ['Trace Rifle', 'Range']];
     const leaders = CAT.map((c) => { const L = leg.filter((w) => w.ty === c[0] && w.s[c[1]] != null).sort((a, b) => b.s[c[1]] - a.s[c[1]]).slice(0, 3); return L.length ? `<div class="d2-lead"><h3>${esc(c[0])}s <small>highest base ${esc(c[1])}</small></h3><ol>${L.map((w) => `<li><button type="button" class="d2-link" data-open="w${w.h}">${img(w.ic, 32, '')}<span>${esc(w.n)}</span></button><b>${w.s[c[1]]}</b><small>${esc(w.frn)}</small></li>`).join('')}</ol></div>` : ''; }).join('');
@@ -407,7 +408,7 @@
     const curHtml = cur && cur.picks && cur.picks.length ? `<section class="d2-sec"><h2>${ico('star')}Community meta picks <small>Updated ${esc(cur.updated || '')}</small></h2><p class="d2-fine">${esc(cur.note || 'Picks reviewed by the RankSurge team from current community tier lists and patch notes.')}</p><div class="d2-grid">${cur.picks.map((p) => { const it = p.k === 'a' ? D.A.find((a) => a.n === p.n) : D.W.find((w) => w.n === p.n && !w.ad); return it ? `<div class="d2-pick">${tile(it, p.k === 'a' ? 'a' : 'w')}<p><b>${esc(p.tag || '')}</b> ${esc(p.why || '')}</p></div>` : ''; }).join('')}</div></section>` : '';
     const exoBy = CLS.map((c) => { const L = newestA.filter((a) => a.cl === c); return L.length ? `<div><h3>${esc(CLSN[c])}</h3><div class="d2-grid d2-grid--s">${L.map((a) => tile(a, 'a')).join('')}</div></div>` : ''; }).join('');
     APP.innerHTML = `${hubNav()}${curHtml}
-      <section class="d2-sec"><h2>${ico('clock')}New this season</h2><p class="d2-fine">Weapons added in the latest Destiny 2 releases, straight from Bungie's item data.</p><div class="d2-grid">${newestW.slice(0, 24).map((w) => tile(w, 'w')).join('')}</div><p class="d2-more"><a class="rs-btn rs-btn--ghost" href="${PAGE.weapons}?sort=newest">See every weapon</a></p></section>
+      <section class="d2-sec"><h2>${ico('clock')}Latest update</h2><p class="d2-fine">Weapons Bungie added or refreshed in the most recent Destiny 2 update, straight from Bungie's item data.</p><div class="d2-grid">${newestW.slice(0, 24).map((w) => tile(w, 'w')).join('')}</div><p class="d2-more"><a class="rs-btn rs-btn--ghost" href="${PAGE.weapons}?sort=newest">See every weapon</a></p></section>
       ${exoBy ? `<section class="d2-sec"><h2>${ico('shield')}Newest exotic armor by class</h2>${exoBy}</section>` : ''}
       <section class="d2-sec"><h2>${ico('chart')}Stat leaders by weapon type</h2><p class="d2-fine">The three legendary weapons with the highest base value in the stat that matters most for each type. Base stats only: perks, masterwork and mods change the final numbers.</p><div class="d2-leads">${leaders}</div></section>`;
     APP.onclick = (e) => { const o = e.target.closest('[data-open]'); if (o) openKey(o.dataset.open); };
