@@ -133,10 +133,12 @@
     </button><div class="mr-card__f">${cmpBtn('w', w.id)}<a class="mr-pill" href="${PAGES.planner}#add=${w.id}">${ico('plus')}Loadout</a></div></li>`;
   }
   function rankIn(w, k) {
-    const L = D.W.filter((x) => x.ty === w.ty && x[k] != null).sort((a, b) => b[k] - a[k]);
-    const i = L.findIndex((x) => x.id === w.id); if (i < 0 || L.length < 2) return '';
-    const tie = L.filter((x) => x[k] === w[k]).length > 1;
-    return i === 0 && !tie ? `Highest ${STATN[k].toLowerCase()} of ${L.length} ${w.ty === 'SMG' ? 'SMGs' : w.ty.toLowerCase() + 's'}` : i === L.length - 1 && !tie ? `Lowest ${STATN[k].toLowerCase()} of ${L.length}` : `#${i + 1} of ${L.length} for ${STATN[k].toLowerCase()}`;
+    const L = D.W.filter((x) => x.ty === w.ty && x[k] != null); if (L.length < 2 || w[k] == null) return '';
+    const above = L.filter((x) => x[k] > w[k]).length, same = L.filter((x) => x[k] === w[k]).length, nm = STATN[k].toLowerCase(), pl = w.ty === 'SMG' ? 'SMGs' : w.ty.toLowerCase() + 's';
+    if (same === L.length) return `Same ${nm} as every other ${w.ty === 'SMG' ? 'SMG' : w.ty.toLowerCase()}`;
+    if (above === 0) return same > 1 ? `Tied for highest ${nm} of ${L.length} ${pl}` : `Highest ${nm} of ${L.length} ${pl}`;
+    if (above + same === L.length) return same > 1 ? `Tied for lowest ${nm} of ${L.length}` : `Lowest ${nm} of ${L.length}`;
+    return `${same > 1 ? 'Tied #' : '#'}${above + 1} of ${L.length} for ${nm}`;
   }
   function openWeapon(id) {
     const w = D.WI[id]; if (!w) return;
