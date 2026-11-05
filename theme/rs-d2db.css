@@ -309,3 +309,22 @@ button.d2-slot.is-empty:hover{border-color:var(--rs-cyan,#00E5FF)}
 .d2-res__pc i{font-style:normal;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--lg,#f5c542);margin-left:2px}
 .d2-fine--fill{color:var(--lg,#f5c542)}
 @media (max-width:760px){.d2-res__st{grid-template-columns:repeat(3,1fr)}.d2-res__pc span{flex:1 1 100%}}
+/* AI loadout agent */
+.d2-ag__pick{display:grid;gap:10px;margin:12px 0}
+.d2-chips--act{flex-wrap:wrap}
+.d2-ag__ai{padding:14px;border-radius:12px;border:1px solid var(--rs-cyan,#00E5FF);background:var(--sf2);margin:8px 0 12px}
+.d2-ag__ai p{margin:0}
+.d2-ag__aih{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--rs-cyan,#00E5FF);margin-bottom:6px!important}
+.d2-ag__list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:stretch}
+.d2-ag__o{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);height:100%}
+.d2-ag__o.is-ai{border-color:var(--ok);box-shadow:inset 3px 0 0 var(--ok)}
+.d2-ag__h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:18px}
+.d2-ag__badge{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:999px;background:var(--ok);color:#06110a}
+.d2-ag__k{margin:4px 0 0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.d2-ag__btns{display:grid;gap:8px;margin-top:auto;padding-top:6px}
+.d2-ag__btns .rs-btn{justify-content:center;min-height:48px;font-size:16px}
+@media (max-width:760px){.d2-ag__list{grid-template-columns:1fr}.d2-ag__pick .d2-chips{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;-webkit-overflow-scrolling:touch}.d2-ag__pick .d2-chip{flex:0 0 auto}}
+button.d2-chip{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--bd);background:var(--sf2);color:#DCE0E8;font:600 16px var(--rs-display,'Rajdhani',sans-serif);cursor:pointer;white-space:nowrap}
+button.d2-chip small{color:var(--mu);font-size:13px}
+button.d2-chip.is-on{border-color:var(--rs-cyan,#00E5FF);background:rgba(0,229,255,.12);color:#fff}
+button.d2-chip:focus-visible{outline:2px solid var(--rs-cyan,#00E5FF);outline-offset:2px}

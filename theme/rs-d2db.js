@@ -564,7 +564,7 @@
     APP.innerHTML = `${hubNav()}<div class="d2-bld">
       <div class="d2-bld__tabs" role="tablist" aria-label="Builds">${['A', 'B'].map((k) => `<button type="button" role="tab" aria-selected="${S.cur === k}" data-btab="${k}">Build ${k}<small>${esc(S[k].name || CLSN[S[k].c])}</small></button>`).join('')}<button type="button" role="tab" aria-selected="false" data-btab="CMP">${ico('compare')}Compare A vs B</button></div>
       <div class="d2-bld__top"><label class="d2-sel"><span>Build name</span><input type="text" name="bname" maxlength="40" value="${esc(b.name)}" placeholder="Like: Void Hunter for raids"></label>${chips('bcls', CLS.map((c) => [c, CLSN[c]]), b.c, 'Class')}${chips('bsub', SUBS.map((s) => [s, s]), b.sub, 'Subclass')}</div>
-      <div class="d2-easy" role="group" aria-label="Quick start"><div class="d2-easy__row"><button type="button" class="rs-btn rs-btn--ghost" data-optim>${ico('user')}Best build from my gear</button><button type="button" class="rs-btn" data-starter>${ico('bolt')}Fill a starter ${esc(CLSN[b.c])} build</button><label class="d2-sel d2-sel--s"><span>Armor set</span><select name="eset"><option value="">Pick a set to fill all armor</option>${bestSet(b.c).slice(0, 12).map((x) => `<option value="${x.k}">${esc(x.n)}</option>`).join('')}</select></label><label class="d2-sel d2-sel--s"><span>Focus stat</span><select name="efocus"><option value="">Choose the stat to max</option>${AST.map((x) => `<option${b.focus === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div><p class="d2-fine">New here? Tap <b>Fill a starter build</b> for meta picks, then swap anything you like. Picking a focus stat sets every armor piece's archetype to boost it.</p></div>
+      <div class="d2-easy" role="group" aria-label="Quick start"><div class="d2-easy__row"><button type="button" class="rs-btn" data-agent>${ico('bolt')}AI loadouts for an activity</button><button type="button" class="rs-btn rs-btn--ghost" data-optim>${ico('user')}Best build from my gear</button><button type="button" class="rs-btn" data-starter>${ico('bolt')}Fill a starter ${esc(CLSN[b.c])} build</button><label class="d2-sel d2-sel--s"><span>Armor set</span><select name="eset"><option value="">Pick a set to fill all armor</option>${bestSet(b.c).slice(0, 12).map((x) => `<option value="${x.k}">${esc(x.n)}</option>`).join('')}</select></label><label class="d2-sel d2-sel--s"><span>Focus stat</span><select name="efocus"><option value="">Choose the stat to max</option>${AST.map((x) => `<option${b.focus === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div><p class="d2-fine">New here? Tap <b>Fill a starter build</b> for meta picks, then swap anything you like. Picking a focus stat sets every armor piece's archetype to boost it.</p></div>
       <div class="d2-bld__grid"><section><h2>Weapons</h2><div class="d2-slots">${slotW}</div><h2>Armor</h2><div class="d2-slots">${slotA}</div></section>
       <aside class="d2-bld__sum" aria-label="Build totals"><h2>Build stats</h2><div class="d2-asts">${stats}</div><p class="d2-fine">Total ${total} from armor${b.real ? ' (your real rolls)' : ' (estimated from each piece\'s archetype, tertiary stat and gear tier)'}. Each stat goes to 200: 100 gives the full base effect, and points past 100 add an extra bonus. Mods, tuning and your subclass fragments add more in game.</p>
       ${T.warn.length ? `<div class="d2-warn" role="alert">${T.warn.map((w) => `<p>${esc(w)}</p>`).join('')}</div>` : ''}
@@ -595,6 +595,7 @@
       if (e.target.closest('[data-clear]')) { if (confirm('Clear Build ' + S.cur + '?')) { S[S.cur] = blank(b.c); bSave(S); buildView(); } return; }
       if (e.target.closest('[data-starter]')) { starter(b); bSave(S); buildView(); toast('Starter ' + CLSN[b.c] + ' build filled. Tap any slot to change it.'); return; }
       if (e.target.closest('[data-jump]')) { const sm = $('.d2-bld__sum', APP); if (sm) sm.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); return; }
+      if (e.target.closest('[data-agent]')) return agent(S);
       if (e.target.closest('[data-optim]')) return optimizer(b, S);
       if (e.target.closest('[data-mine]')) return useMine(b, S);
       if (e.target.closest('[data-push]')) return pushLoadout(b);
@@ -749,10 +750,11 @@
   }
   function optimize(pool, o) {
     const W = [5, 3, 2], pri = o.pri.filter(Boolean);
-    const pieceScore = (c) => pri.reduce((t, k, n) => t + W[n] * (c.st[k] || 0), 0) + AST.reduce((t, k) => t + (c.st[k] || 0), 0) * 0.15;
+    const pieceScore = (c) => pri.reduce((t, k, n) => t + W[n] * (c.st[k] || 0), 0) + AST.reduce((t, k) => t + (c.st[k] || 0), 0) * 0.15 + ((o.bonus && o.bonus[c.it.h]) || 0);
     const cand = {};
     SLOTA.forEach((sl) => {
       let L = pool[sl].slice();
+      if (o.excl) L = L.filter((c) => !(c.it.r === 'exotic' && o.excl[c.it.h]));
       if (o.ex === 'none') L = L.filter((c) => c.it.r !== 'exotic');
       else if (o.ex && o.ex !== 'any') L = L.filter((c) => c.it.r !== 'exotic' || String(c.it.h) === o.ex);
       L.sort((a, b) => pieceScore(b) - pieceScore(a));
@@ -773,7 +775,7 @@
         const t = {}; AST.forEach((k) => { t[k] = 0; }); pick.forEach((c) => AST.forEach((k) => { t[k] += c.st[k] || 0; }));
         if (o.min && pri[0] && t[pri[0]] < o.min) return;
         if (o.set) { const cnt = pick.filter((c) => String(c.it.set) === o.set).length; if (cnt < o.setN) return; }
-        const sc = pri.reduce((s, k, i) => s + W[i] * Math.min(200, t[k]), 0) + AST.reduce((s, k) => s + Math.min(200, t[k]), 0) * 0.15;
+        const sc = pri.reduce((s, k, i) => s + W[i] * Math.min(200, t[k]), 0) + AST.reduce((s, k) => s + Math.min(200, t[k]), 0) * 0.15 + pick.reduce((s, c) => s + ((o.bonus && o.bonus[c.it.h]) || 0), 0);
         const nf = pick.filter((c) => c.fill).length;
         n++; res.push({ sc: sc - nf * (o.fill === 'all' ? 12 : 0.5), t, pick: pick.slice(), nf });
         if (res.length > 60) { res.sort((a, b) => b.sc - a.sc); res.length = 20; }
@@ -827,13 +829,152 @@
       run();
     }).catch((e) => { if (e && e.signin) return signIn('Your Bungie session ended. Sign in again to read your gear.'); d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><p class="d2-warn">${esc((e && e.message) || 'Could not reach Bungie. Try again.')}</p>`; });
   }
-  function pushLoadout(b) {
+
+  /* ---------- AI loadout agent: reads the player's inventory, builds 3 loadouts for an activity, AI picks one, one tap equips ---------- */
+  const ACTS = {
+    raid: { n: 'Raid or dungeon', m: 'pve', why: 'boss damage and steady add clear',
+      w: { 'Rocket Launcher': 10, 'Linear Fusion Rifle': 9, 'Machine Gun': 7, 'Sword': 7, 'Grenade Launcher': 9, 'Sniper Rifle': 8, 'Fusion Rifle': 7, 'Trace Rifle': 7, 'Shotgun': 6, 'Glaive': 6, 'Auto Rifle': 7, 'Pulse Rifle': 7, 'Submachine Gun': 7, 'Hand Cannon': 6, 'Scout Rifle': 6, 'Combat Bow': 6, 'Sidearm': 6 },
+      styles: [['Boss damage', ['Weapons', 'Super', 'Class'], 'Big heavy and special damage for damage phases.'], ['Survive and support', ['Health', 'Class', 'Weapons'], 'Tankier, with fast class ability for revives and safety.'], ['Ability spam', ['Grenade', 'Melee', 'Super'], 'Grenades and melees on short cooldowns to clear adds.']] },
+    gm: { n: 'Grandmaster or Master content', m: 'pve', why: 'range, safety and champion control',
+      w: { 'Scout Rifle': 9, 'Pulse Rifle': 8, 'Combat Bow': 8, 'Auto Rifle': 7, 'Hand Cannon': 6, 'Submachine Gun': 5, 'Sidearm': 4, 'Sniper Rifle': 9, 'Grenade Launcher': 8, 'Trace Rifle': 7, 'Fusion Rifle': 6, 'Glaive': 6, 'Shotgun': 3, 'Linear Fusion Rifle': 9, 'Machine Gun': 8, 'Rocket Launcher': 7, 'Sword': 3 },
+      styles: [['Safe and steady', ['Health', 'Class', 'Weapons'], 'Fights from range and survives long encounters.'], ['Damage from range', ['Weapons', 'Health', 'Super'], 'Long-range weapons with as much damage as you can get.'], ['Ability control', ['Grenade', 'Class', 'Health'], 'Grenades and class ability to lock down champions and rooms.']] },
+    adclear: { n: 'Strikes, Onslaught and patrol', m: 'pve', why: 'fast add clear',
+      w: { 'Submachine Gun': 8, 'Auto Rifle': 8, 'Pulse Rifle': 7, 'Hand Cannon': 6, 'Sidearm': 6, 'Scout Rifle': 5, 'Combat Bow': 5, 'Grenade Launcher': 9, 'Trace Rifle': 8, 'Shotgun': 7, 'Fusion Rifle': 7, 'Glaive': 7, 'Sniper Rifle': 4, 'Machine Gun': 10, 'Sword': 8, 'Rocket Launcher': 7, 'Linear Fusion Rifle': 5 },
+      styles: [['Grenade spam', ['Grenade', 'Weapons', 'Melee'], 'Grenades every few seconds plus strong add-clear weapons.'], ['Melee brawler', ['Melee', 'Health', 'Class'], 'Up close and tanky with a fast melee.'], ['Run and gun', ['Weapons', 'Super', 'Grenade'], 'Weapon damage first, with an add-clearing Super.']] },
+    crucible: { n: 'Crucible (PvP)', m: 'pvp', why: 'winning gunfights',
+      w: { 'Hand Cannon': 10, 'Pulse Rifle': 9, 'Scout Rifle': 7, 'Submachine Gun': 7, 'Sidearm': 7, 'Combat Bow': 6, 'Auto Rifle': 6, 'Shotgun': 10, 'Sniper Rifle': 9, 'Fusion Rifle': 8, 'Glaive': 6, 'Grenade Launcher': 5, 'Trace Rifle': 3, 'Rocket Launcher': 9, 'Machine Gun': 7, 'Sword': 6, 'Linear Fusion Rifle': 6 },
+      styles: [['Gunfighter', ['Weapons', 'Health', 'Class'], 'Primary and special weapons first.'], ['Hard to kill', ['Health', 'Class', 'Weapons'], 'Extra health and fast dodge, rift or barricade.'], ['Abilities', ['Grenade', 'Melee', 'Health'], 'Ability kills between gunfights.']] },
+    trials: { n: 'Trials of Osiris', m: 'pvp', why: 'team shots and staying alive',
+      w: { 'Hand Cannon': 10, 'Pulse Rifle': 10, 'Scout Rifle': 8, 'Sidearm': 6, 'Submachine Gun': 6, 'Combat Bow': 6, 'Auto Rifle': 5, 'Shotgun': 9, 'Sniper Rifle': 10, 'Fusion Rifle': 8, 'Glaive': 5, 'Grenade Launcher': 5, 'Trace Rifle': 3, 'Rocket Launcher': 9, 'Machine Gun': 6, 'Sword': 5, 'Linear Fusion Rifle': 7 },
+      styles: [['Anchor', ['Health', 'Weapons', 'Class'], 'Holds lanes with team-shot weapons and extra health.'], ['Aggressive', ['Weapons', 'Class', 'Health'], 'Push with a shotgun or fusion and a fast class ability.'], ['Utility', ['Class', 'Grenade', 'Health'], 'Class ability and grenades to control the round.']] },
+    gambit: { n: 'Gambit', m: 'pve', why: 'invading and burning the Primeval',
+      w: { 'Pulse Rifle': 8, 'Scout Rifle': 8, 'Hand Cannon': 7, 'Auto Rifle': 7, 'Submachine Gun': 6, 'Combat Bow': 6, 'Sidearm': 5, 'Sniper Rifle': 9, 'Grenade Launcher': 7, 'Fusion Rifle': 7, 'Shotgun': 5, 'Trace Rifle': 6, 'Glaive': 5, 'Rocket Launcher': 9, 'Linear Fusion Rifle': 9, 'Machine Gun': 7, 'Sword': 6 },
+      styles: [['Primeval burner', ['Weapons', 'Super', 'Class'], 'Heavy damage to finish the Primeval fast.'], ['Invader', ['Health', 'Weapons', 'Class'], 'Long-range weapons and health for invasions.'], ['Mote collector', ['Grenade', 'Melee', 'Super'], 'Ability add clear to bank motes quickly.']] },
+  };
+  function wScore(w, A) {
+    const t = (A.w[w.ty] || 4) * 10;
+    const cp = (D.curated && D.curated.picks || []).find((p) => p.k === 'w' && p.n === w.n);
+    const meta = cp && new RegExp(A.m === 'pvp' ? 'pvp' : 'pve', 'i').test(cp.tag) ? 30 : 0;
+    const s = w.s || {}, st = A.m === 'pvp' ? (s.Range || 0) * 0.08 + (s.Handling || 0) * 0.06 + (s.Stability || 0) * 0.05 : (s.Impact || 0) * 0.05 + (s.Magazine || 0) * 0.04 + (s['Reload Speed'] || 0) * 0.04;
+    return t + meta + (w.r === 'exotic' ? 8 : 0) + st + rel(w.rel) / 200;
+  }
+  function myWeapons(chId) {
+    const by = {};
+    const rank = (i) => (i.loc === chId ? (i.eq ? 4 : 3) : i.loc === 'vault' ? 2 : i.eq ? 0 : 1);
+    PROF.items.forEach((i) => { const w = D.ALT[i.h]; if (!w || !w.am || SLOTW.indexOf(w.sl) < 0) return; const c = by[w.h]; if (!c || rank(i) > rank(c.i)) by[w.h] = { it: w, i }; });
+    return Object.values(by).filter((c) => !(c.i.eq && c.i.loc !== chId));
+  }
+  function pickWeapons(L, A, excl, used) {
+    used = used || {};
+    const top = {}; SLOTW.forEach((sl) => { top[sl] = L.filter((c) => c.it.sl === sl && !(c.it.r === 'exotic' && excl[c.it.h])).map((c) => ({ c, sc: wScore(c.it, A) - (used[c.it.h] || 0) * 14 })).sort((a, b) => b.sc - a.sc).slice(0, 6); });
+    let best = null;
+    const K = top.kinetic.length ? top.kinetic : [null], E = top.energy.length ? top.energy : [null], P = top.power.length ? top.power : [null];
+    K.forEach((k) => E.forEach((e) => P.forEach((pw) => {
+      const pk = [k, e, pw].filter(Boolean); if (pk.filter((x) => x.c.it.r === 'exotic').length > 1) return;
+      let sc = pk.reduce((t, x) => t + x.sc, 0);
+      const am = [k, e].filter(Boolean).map((x) => x.c.it.am);
+      if (am.length === 2) { if (am.indexOf('primary') < 0) sc -= 25; else if (am.indexOf('special') < 0) sc -= 8; if (k.c.it.ty === e.c.it.ty) sc -= 12; if (k.c.it.el === e.c.it.el && k.c.it.el !== 'Kinetic') sc -= 3; }
+      if (!best || sc > best.sc) best = { sc, k, e, pw };
+    })));
+    if (!best) return null;
+    return { kinetic: best.k && best.k.c, energy: best.e && best.e.c, power: best.pw && best.pw.c };
+  }
+  function agentBuild(ch, A) {
+    const pool = myArmor(ch.cls), wL = myWeapons(ch.id);
+    const bonus = {}; (D.curated && D.curated.picks || []).forEach((p) => { if (p.k !== 'a') return; D.A.forEach((a) => { if (a.n === p.n) bonus[a.h] = 18; }); });
+    const exW = {}, exA = {}, usedW = {}, out = [];
+    A.styles.forEach((st) => {
+      let w = pickWeapons(wL, A, exW, usedW); if (!w || !SLOTW.some((sl) => w[sl])) w = pickWeapons(wL, A, {}, usedW);
+      let r = optimize(pool, { pri: st[1], ex: 'any', set: '', setN: 2, min: 0, fill: 'gaps', cls: ch.cls, excl: exA, bonus });
+      if (!r.res || !r.res.length) r = optimize(pool, { pri: st[1], ex: 'any', set: '', setN: 2, min: 0, fill: 'gaps', cls: ch.cls, bonus });
+      const a = r.res && r.res[0]; if (!a && !w) return;
+      SLOTW.forEach((sl) => { const c = w && w[sl]; if (c) { usedW[c.it.h] = (usedW[c.it.h] || 0) + 1; if (c.it.r === 'exotic') exW[c.it.h] = 1; } });
+      if (a) a.pick.forEach((c) => { if (c.it.r === 'exotic') exA[c.it.h] = 1; });
+      out.push({ st, w: w || {}, a });
+    });
+    return out;
+  }
+  const aiTxt = (v) => String(v || '').replace(/[^A-Za-z0-9 .%\/+-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 32) || '-';
+  function agentAI(opts, A, ch) {
+    const host = document.querySelector('[data-ts]'), pass = (document.querySelector('[data-pass]') || {}).dataset;
+    const stats = { activity: aiTxt(A.n), class: aiTxt(CLSN[ch.cls]) };
+    opts.forEach((o, i) => {
+      const L = 'abc'[i];
+      stats['opt_' + L + '_style'] = aiTxt(o.st[0]);
+      SLOTW.forEach((sl) => { const c = o.w[sl]; stats['opt_' + L + '_' + sl] = c ? aiTxt(c.it.n + ' ' + c.it.ty) : '-'; });
+      const ex = o.a && o.a.pick.find((c) => c.it.r === 'exotic'); stats['opt_' + L + '_exotic_armor'] = ex ? aiTxt(ex.it.n) : 'none';
+      stats['opt_' + L + '_stats'] = o.a ? aiTxt(AST.map((k) => k[0] + k[1] + ' ' + o.a.t[k]).join(' ')) : '-';
+    });
+    const q = `Which loadout, A, B or C, is best for ${A.n} on my ${CLSN[ch.cls]}? Start your answer with only the letter, then explain why in 2 or 3 short sentences using the weapons, exotic armor and stats given.`.slice(0, 300);
+    const body = { game: 'destiny-2', stats, question: q }; if (pass && pass.pass) body.pass = pass.pass;
+    return fetch(API + '/v1/ask', { method: 'POST', credentials: 'omit', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json().then((j) => ({ ok: r.ok, j, s: r.status }))).catch(() => ({ ok: false, j: {} }));
+  }
+  function agent(S) {
+    if (!vget()) return signIn('Sign in with Bungie so the RankSurge AI agent can look through your vault and characters and build loadouts from the gear you own. Nothing moves until you tap Equip.');
+    const d = sheet(`<h2 class="d2-sh__h">${ico('bolt')}AI loadouts for an activity</h2><p class="d2-load">Reading your Guardians, weapons and armor from Bungie&hellip;</p>`, 'wide');
+    profile().then((p) => {
+      if (!p.chars.length) { d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><p class="d2-warn">Bungie did not return any characters on this account.</p>`; return; }
+      let ch = p.chars[0], act = 'raid', opts = [], aiPick = -1;
+      const head = () => `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><h2 class="d2-sh__h">${ico('bolt')}AI loadouts for an activity</h2>
+        <p class="d2-sh__sub">Pick a character and an activity. RankSurge searches every weapon and armor piece you own, builds three loadouts, and the AI coach picks the best one. Tap Equip and it goes straight onto your Guardian.</p>
+        <div class="d2-ag__pick"><div class="d2-chips" role="radiogroup" aria-label="Character">${p.chars.map((c) => `<button type="button" class="d2-chip${c.id === ch.id ? ' is-on' : ''}" role="radio" aria-checked="${c.id === ch.id}" data-ch="${c.id}">${esc(CLSN[c.cls])} <small>${c.light || ''}</small></button>`).join('')}</div>
+        <div class="d2-chips d2-chips--act" role="radiogroup" aria-label="Activity">${Object.keys(ACTS).map((k) => `<button type="button" class="d2-chip${k === act ? ' is-on' : ''}" role="radio" aria-checked="${k === act}" data-act="${k}">${esc(ACTS[k].n)}</button>`).join('')}</div></div>
+        <div data-ag-out aria-live="polite"></div>`;
+      const card = (o, i) => {
+        const ws = SLOTW.map((sl) => o.w[sl]).filter(Boolean), as = o.a ? o.a.pick : [];
+        const it = (c) => `<span class="${c.fill ? 'is-fill' : ''}">${img(c.it.ic, 40, '')}<em>${esc(c.it.n)}</em>${c.fill ? '<i>Not owned</i>' : ''}</span>`;
+        return `<li class="d2-ag__o${i === aiPick ? ' is-ai' : ''}"><div class="d2-ag__h"><b>${'ABC'[i]}. ${esc(o.st[0])}</b>${i === aiPick ? '<span class="d2-ag__badge">AI pick</span>' : ''}</div><p class="d2-fine">${esc(o.st[2])}</p>
+          <p class="d2-ag__k">Weapons</p><div class="d2-res__pc">${ws.map(it).join('') || '<small>No weapons found</small>'}</div>
+          <p class="d2-ag__k">Armor</p><div class="d2-res__pc">${as.map(it).join('') || '<small>No armor found</small>'}</div>
+          ${o.a ? `<div class="d2-res__st">${AST.map((k) => `<span class="${o.st[1].indexOf(k) > -1 ? 'is-pri' : ''}"><small>${esc(k)}</small><b>${o.a.t[k]}</b></span>`).join('')}</div>` : ''}
+          ${o.a && o.a.nf ? `<p class="d2-fine d2-fine--fill">${o.a.nf === 1 ? '1 armor piece is' : o.a.nf + ' armor pieces are'} not in your inventory (best-roll estimate). Equip skips ${o.a.nf === 1 ? 'it' : 'them'}.</p>` : ''}
+          <div class="d2-ag__btns"><button type="button" class="rs-btn" data-eq="${i}">${ico('push')}Equip on my ${esc(CLSN[ch.cls])}</button><button type="button" class="rs-btn rs-btn--ghost" data-plan="${i}">Open in planner</button></div></li>`;
+      };
+      const draw = () => {
+        const out = $('[data-ag-out]', d), A = ACTS[act];
+        opts = agentBuild(ch, A); aiPick = -1;
+        if (!opts.length) { out.innerHTML = `<p class="d2-warn">RankSurge could not find gear for your ${esc(CLSN[ch.cls])}. Make sure Bungie shows it in your vault or on the character.</p>`; return; }
+        out.innerHTML = `<div class="d2-ag__ai" data-ai><p class="d2-load">The AI coach is comparing the three loadouts for ${esc(A.n)}&hellip;</p></div><ol class="d2-ag__list">${opts.map(card).join('')}</ol>`;
+        const seq = (draw.n = (draw.n || 0) + 1);
+        agentAI(opts, A, ch).then((r) => {
+          if (seq !== draw.n) return;
+          const box = $('[data-ai]', d); if (!box) return;
+          if (r.ok && r.j.answer) {
+            const m = /^\W*(?:option\s+|loadout\s+)?([ABC])\b/i.exec(r.j.answer); aiPick = m ? 'ABC'.indexOf(m[1].toUpperCase()) : -1;
+            if (aiPick >= opts.length) aiPick = -1;
+            box.innerHTML = `<p class="d2-ag__aih">${ico('bolt')}AI coach${aiPick > -1 ? `: Loadout ${'ABC'[aiPick]}` : ''}</p><p>${esc(r.j.answer.replace(/^\W*(?:option\s+|loadout\s+)?[ABC]\b[\s.:,-]*/i, ''))}</p>`;
+            $('.d2-ag__list', d).innerHTML = opts.map(card).join('');
+          } else {
+            box.innerHTML = `<p class="d2-fine">${esc((r.j && r.j.message) || 'The AI coach is busy right now.')} Loadout A is RankSurge's top pick for ${esc(A.n)}.</p>`;
+          }
+        });
+      };
+      const load = (o, equip) => {
+        const b = S[S.cur]; b.c = ch.cls; b.inst = b.inst || {}; b.real = {}; b.fill = {};
+        SLOTW.forEach((sl) => { const c = o.w[sl]; b.w[sl] = c ? c.it.h : null; b.wp[sl] = []; if (c) b.inst[sl] = c.i.id; else delete b.inst[sl]; });
+        if (o.a) o.a.pick.forEach((c) => { const sl = c.it.sl; b.a[sl] = c.it.h; if (c.fill) { delete b.inst[sl]; if (c.ap) { b.ap[sl] = c.ap; delete b.real[sl]; } else b.real[sl] = c.st; b.fill[sl] = 1; } else { b.real[sl] = c.st; b.inst[sl] = c.i.id; } });
+        b.name = `${ACTS[act].n}: ${o.st[0]}`.slice(0, 60);
+        bSave(S); closeSheet(); buildView();
+        if (equip) setTimeout(() => pushLoadout(b, { equip: true, auto: true }), 60); else toast('Loadout opened in the planner. Tap Save to keep it in a loadout slot.');
+      };
+      d.innerHTML = head(); draw();
+      d.addEventListener('click', (e) => {
+        const c = e.target.closest('[data-ch]'), a = e.target.closest('[data-act]'), q = e.target.closest('[data-eq]'), pl = e.target.closest('[data-plan]');
+        if (c) { ch = p.chars.find((x) => x.id === c.dataset.ch) || ch; d.innerHTML = head(); draw(); }
+        else if (a) { act = a.dataset.act; d.innerHTML = head(); draw(); }
+        else if (q) load(opts[+q.dataset.eq], true);
+        else if (pl) load(opts[+pl.dataset.plan], false);
+      });
+    }).catch((e) => { if (e && e.signin) return signIn('Your Bungie session ended. Sign in again so the AI agent can read your gear.'); d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><p class="d2-warn">${esc((e && e.message) || 'Could not reach Bungie. Try again.')}</p>`; });
+  }
+  function pushLoadout(b, opt) {
+    const eqOnly = !!(opt && opt.equip);
     const T = buildTotals(b);
     if (T.warn.length) { toast(T.warn[0], 1); return; }
     const keys = SLOTW.map((s) => ['w', s, b.w[s]]).concat(SLOTA.map((s) => ['a', s, b.a[s]])).filter((x) => x[2]);
     if (!keys.length) { toast('Add some gear to the build first.', 1); return; }
-    if (!vget()) return signIn('Sign in with Bungie to save this build into one of your in-game loadout slots.');
-    const d = sheet(`<h2 class="d2-sh__h">${ico('push')}Save to in-game loadout</h2><p class="d2-load">Checking your Guardians and gear&hellip;</p>`);
+    if (!vget()) return signIn(eqOnly ? 'Sign in with Bungie so RankSurge can equip this loadout on your Guardian.' : 'Sign in with Bungie to save this build into one of your in-game loadout slots.');
+    const d = sheet(`<h2 class="d2-sh__h">${ico('push')}${eqOnly ? 'Equip on my Guardian' : 'Save to in-game loadout'}</h2><p class="d2-load">Checking your Guardians and gear&hellip;</p>`);
     profile().then((p) => {
       const chars = p.chars.filter((c) => c.cls === b.c);
       if (!chars.length) { d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><h2 class="d2-sh__h">No ${esc(CLSN[b.c])} found</h2><p>This build is for a ${esc(CLSN[b.c])}, but your account has no ${esc(CLSN[b.c])} character.</p>`; return; }
@@ -841,15 +982,15 @@
       const rows = keys.map((k) => { const it = k[0] === 'w' ? D.WH[k[2]] : D.AH[k[2]]; const pin = b.inst && b.inst[k[1]] ? PROF.items.find((i) => i.id === b.inst[k[1]]) : null; const o = pin || owned(+k[2], ch.id); return { k, it, o }; });
       const miss = rows.filter((r) => !r.o);
       const slots = (p.los[ch.id] || []);
-      d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><h2 class="d2-sh__h">${ico('push')}Save to your ${esc(CLSN[b.c])}'s loadout</h2>
+      d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><h2 class="d2-sh__h">${ico('push')}${eqOnly ? `Equip on your ${esc(CLSN[b.c])}` : `Save to your ${esc(CLSN[b.c])}'s loadout`}</h2>
         <ul class="d2-own">${rows.map((r) => `<li class="${r.o ? 'is-ok' : 'is-miss'}">${img(r.it.ic, 32, '')}<b>${esc(r.it.n)}</b><small>${r.o ? (r.o.loc === ch.id ? (r.o.eq ? 'Equipped' : 'On this character') : r.o.loc === 'vault' ? 'In your vault' : 'On another character') : 'Not owned'}</small></li>`).join('')}</ul>
         ${miss.length ? `<p class="d2-warn">You don't own ${miss.length} of these items, so they are left out. Destiny 2 only saves loadouts from gear you have.</p>` : ''}
-        ${slots.length ? `<label class="d2-sel"><span>Loadout slot</span><select data-slot>${slots.map((s) => `<option value="${s.i}">Slot ${s.i + 1}${s.empty ? ' (empty)' : ' (will be replaced)'}</option>`).join('')}</select></label>` : '<p class="d2-warn">Bungie did not return your loadout slots. Open Destiny 2 once and try again.</p>'}
+        ${eqOnly ? `<p class="d2-fine">RankSurge moves each item to your ${esc(CLSN[b.c])} and equips it. Your Guardian must be in orbit or a social space, and the character needs free inventory space for each item.</p><p><button type="button" class="rs-btn" data-go${rows.length > miss.length ? '' : ' disabled'}>${ico('bolt')}Equip now</button></p><ol class="d2-steps" data-steps aria-live="polite"></ol>` : `${slots.length ? `<label class="d2-sel"><span>Loadout slot</span><select data-slot>${slots.map((s) => `<option value="${s.i}">Slot ${s.i + 1}${s.empty ? ' (empty)' : ' (will be replaced)'}</option>`).join('')}</select></label>` : '<p class="d2-warn">Bungie did not return your loadout slots. Open Destiny 2 once and try again.</p>'}
         <p class="d2-fine">RankSurge moves each item to your ${esc(CLSN[b.c])}, equips it, then saves what is equipped into the slot. Your Guardian must be in orbit or a social space, and the character's inventory needs free space for each item.</p>
-        <p><button type="button" class="rs-btn" data-go${slots.length && rows.length > miss.length ? '' : ' disabled'}>Move, equip and save</button></p><ol class="d2-steps" data-steps aria-live="polite"></ol>`;
+        <p><button type="button" class="rs-btn" data-go${slots.length && rows.length > miss.length ? '' : ' disabled'}>Move, equip and save</button></p><ol class="d2-steps" data-steps aria-live="polite"></ol>`}`;
       const go = $('[data-go]', d); if (!go) return;
       go.onclick = async () => {
-        const ix = +$('[data-slot]', d).value;
+        const ix = eqOnly ? -1 : +$('[data-slot]', d).value;
         const sl = slots.find((s) => s.i === ix);
         if (sl && !sl.empty && !confirm(`Replace loadout slot ${ix + 1} on your ${CLSN[b.c]}?`)) return;
         go.disabled = true;
@@ -865,6 +1006,7 @@
             }
             if (!o.eq) { step(`Equipping ${r.it.n}`); await act({ op: 'equip', itemId: o.id, characterId: ch.id }); o.eq = true; }
           }
+          if (eqOnly) { step('Done. Your Guardian is wearing the new loadout.'); toast('Loadout equipped'); return; }
           step(`Saving to loadout slot ${ix + 1}`);
           const body = { op: 'loadout_save', characterId: ch.id, index: ix };
           if (sl) { if (sl.color) body.colorHash = sl.color; if (sl.icon) body.iconHash = sl.icon; if (sl.name) body.nameHash = sl.name; }
@@ -877,6 +1019,7 @@
           go.disabled = false;
         }
       };
+      if (eqOnly && opt.auto && !go.disabled) { const st = $('[data-steps]', d); if (st) st.scrollIntoView({ block: 'nearest' }); go.onclick(); }
     }).catch((e) => { if (e && e.signin) return signIn('Your Bungie session ended. Sign in again to save loadouts.'); d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><p class="d2-warn">${esc((e && e.message) || 'Could not reach Bungie. Try again.')}</p>`; });
   }
 
