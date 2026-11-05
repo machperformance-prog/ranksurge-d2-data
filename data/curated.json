@@ -1,0 +1,30 @@
+{
+  "updated": "November 5, 2026",
+  "note": "Community meta picks the RankSurge team gathered from current public build guides and tier lists (last revised July and August 2026). The meta shifts with every patch, so check the stats and perks before you farm. Sources: blueberries.gg PvE and PvP weapon lists and class build guides.",
+  "picks": [
+    { "k": "w", "n": "Choir of One", "tag": "PvE special", "why": "Rated top tier all-rounder with strong ammo economy and damage." },
+    { "k": "w", "n": "Tractor Cannon", "tag": "PvE heavy", "why": "Its debuff raises damage for the whole fireteam." },
+    { "k": "w", "n": "Hezen Vengeance", "tag": "PvE heavy", "why": "Named the best rocket launcher available right now." },
+    { "k": "w", "n": "Refurbished A499", "tag": "PvE heavy", "why": "One of the most consistent heavy damage options." },
+    { "k": "w", "n": "Multimach CCX", "tag": "PvE and PvP primary", "why": "Strong in both modes; Attrition Orbs with Frenzy suit PvE." },
+    { "k": "w", "n": "Submission", "tag": "PvE and PvP primary", "why": "Can lead a build or back one up in either mode." },
+    { "k": "w", "n": "Khvostov 7G-0X", "tag": "PvE primary", "why": "Clears adds well and helps your ammo economy." },
+    { "k": "w", "n": "Conspiracy Honed", "tag": "PvE special", "why": "Top-tier PvE sniper rifle." },
+    { "k": "w", "n": "Festival Flight", "tag": "PvE special", "why": "Strand grenade launcher with many strong perks for area denial." },
+    { "k": "w", "n": "Rose", "tag": "PvP primary", "why": "A must-have PvP hand cannon with Slideshot and Precision Instrument." },
+    { "k": "w", "n": "Hawkmoon", "tag": "PvP exotic", "why": "One of the strongest exotic hand cannons in the Crucible." },
+    { "k": "w", "n": "Igneous Hammer", "tag": "PvP primary", "why": "Long-time Crucible staple that is still top tier." },
+    { "k": "w", "n": "The Inquisitor", "tag": "PvP special", "why": "Sits at the top of PvP shotguns and is easy to use." },
+    { "k": "w", "n": "Conditional Finality", "tag": "PvP exotic", "why": "Still among the strongest shotguns, especially against Supers." },
+    { "k": "a", "n": "Gifted Conviction", "tag": "Hunter", "why": "Powers the top-rated Arc and Prismatic Hunter builds." },
+    { "k": "a", "n": "Relativism", "tag": "Hunter", "why": "Prismatic class item behind several top Hunter builds." },
+    { "k": "a", "n": "Gyrfalcon's Hauberk", "tag": "Hunter", "why": "Core of the stealth Void Hunter build." },
+    { "k": "a", "n": "Stoicism", "tag": "Titan", "why": "Prismatic class item used in two of the top Titan builds." },
+    { "k": "a", "n": "Wormgod Caress", "tag": "Titan", "why": "Solar melee Titan build favourite." },
+    { "k": "a", "n": "Cuirass of the Falling Star", "tag": "Titan", "why": "Anchors the Arc Super Titan build." },
+    { "k": "a", "n": "Eunoia", "tag": "Warlock", "why": "Paired with Boots of the Assembler in the top Solar Warlock build." },
+    { "k": "a", "n": "Getaway Artist", "tag": "Warlock", "why": "Prismatic Warlock build staple." },
+    { "k": "a", "n": "Geomag Stabilizers", "tag": "Warlock", "why": "Drives the Arc Chaos Reach Super build." },
+    { "k": "a", "n": "Swarmers", "tag": "Warlock", "why": "Void Warlock build that feeds on enemy swarms." }
+  ]
+}

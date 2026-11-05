@@ -1,0 +1,668 @@
+/* RankSurge Destiny 2 database: weapons, armor, build planner, compare, best gear.
+   Data: daily build of Bungie's manifest (github.com/machperformance-prog/ranksurge-d2-data via jsDelivr), cached in IndexedDB.
+   Loadout push: the vault manager's Bungie session (same browser) + RankSurge Worker /v2/vault/*. */
+(function () {
+  'use strict';
+  const R = document.getElementById('rsd2');
+  if (!R) return;
+  const MODE = R.dataset.mode || 'weapons';
+  const CDN = (R.dataset.cdn || '').replace(/\/?$/, '/');
+  const API = (R.dataset.api || '').replace(/\/$/, '');
+  const BN = 'https://www.bungie.net';
+  const APP = R.querySelector('[data-d2-app]');
+  const CLS = ['hunter', 'titan', 'warlock'];
+  const CLSN = { hunter: 'Hunter', titan: 'Titan', warlock: 'Warlock', any: 'Any class' };
+  const CLS_TYPE = { titan: 0, hunter: 1, warlock: 2 };
+  const SLOTW = ['kinetic', 'energy', 'power'];
+  const SLOTA = ['helmet', 'arms', 'chest', 'legs', 'class'];
+  const SLOTN = { kinetic: 'Kinetic', energy: 'Energy', power: 'Power', helmet: 'Helmet', arms: 'Arms', chest: 'Chest', legs: 'Legs', class: 'Class item' };
+  const BUCKET = { kinetic: 1498876634, energy: 2465295065, power: 953998645, helmet: 3448274439, arms: 3551918588, chest: 14239492, legs: 20886954, class: 1585787867 };
+  const AST = ['Weapons', 'Health', 'Class', 'Grenade', 'Super', 'Melee'];
+  const AST_ID = { Weapons: '2996146975', Health: '392767087', Class: '1943323491', Grenade: '1735777505', Super: '144602215', Melee: '4244567218' };
+  const ELEM = ['Kinetic', 'Arc', 'Solar', 'Void', 'Stasis', 'Strand'];
+  const SUBS = ['Arc', 'Solar', 'Void', 'Stasis', 'Strand', 'Prismatic'];
+  const KEY_STATS = ['Impact', 'Range', 'Stability', 'Handling', 'Reload Speed', 'Aim Assistance', 'Airborne Effectiveness', 'Blast Radius', 'Velocity', 'Accuracy', 'Swing Speed', 'Charge Rate', 'Guard Efficiency', 'Guard Resistance', 'Ammo Capacity', 'Shield Duration', 'Zoom', 'Recoil Direction', 'Ammo Generation', 'Heat Generated', 'Cooling Efficiency', 'Vent Speed', 'Persistence'];
+  const NUM_STATS = ['Rounds Per Minute', 'Charge Time', 'Draw Time', 'Magazine', 'Inventory Size'];
+  const PAGE = { weapons: '/pages/destiny-2-weapons', armor: '/pages/destiny-2-armor', build: '/pages/destiny-2-build-planner', top: '/pages/destiny-2-best-weapons-and-armor' };
+  let D = null; // data
+  let P = {}; // perks
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- helpers ---------- */
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  const img = (p, w, alt, cls) => (p ? `<img src="${BN}${esc(p)}" width="${w}" height="${w}" alt="${esc(alt || '')}" loading="lazy" decoding="async"${cls ? ` class="${cls}"` : ''}>` : '');
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const perk = (h) => P[h] || null;
+  const pn = (h) => (P[h] ? P[h].n : '');
+  const rel = (r) => { const m = /^v(\d)(\d\d)/.exec(r || ''); return m ? +m[1] * 100 + +m[2] : 0; };
+  function live(t) { const l = $('[data-d2-live]', R); if (l) l.textContent = t; }
+  function toast(msg, bad) { const t = document.createElement('div'); t.className = 'd2-toast' + (bad ? ' is-bad' : ''); t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 4200); }
+  function debounce(f, ms) { let t; return function () { const a = arguments; clearTimeout(t); t = setTimeout(() => f.apply(null, a), ms); }; }
+  function ico(name) {
+    const P2 = {
+      kinetic: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/>',
+      energy: '<path d="M13 3 6 13h5l-1 8 7-10h-5z"/>',
+      power: '<path d="M12 3 4 8v8l8 5 8-5V8z"/><path d="M12 8v8"/>',
+      helmet: '<path d="M5 14a7 7 0 0 1 14 0v3H5z"/><path d="M9 17v3M15 17v3M8 12h8"/>',
+      arms: '<path d="M7 20v-7l-2-3 3-6 3 3v4h6l2 3-3 6z"/>',
+      chest: '<path d="M8 4h8l4 4-2 3v9H6v-9L4 8z"/><path d="M12 8v12"/>',
+      legs: '<path d="M7 3h10l-1 18h-3l-1-9-1 9H8z"/>',
+      class: '<path d="M6 3h12v9l-6 9-6-9z"/><path d="M9 8h6"/>',
+      compare: '<path d="M8 4v16M16 4v16"/><path d="M4 8h8M12 16h8"/>',
+      build: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><path d="M17 14v6M14 17h6"/>',
+      close: '<path d="M6 6l12 12M18 6 6 18"/>',
+      share: '<path d="M4 12v7h16v-7M12 3v13M7 8l5-5 5 5"/>',
+      push: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/>',
+      star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+      filter: '<path d="M4 5h16l-6 7v6l-4 2v-8z"/>',
+      user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+      bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+      shield: '<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/>',
+      flask: '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M7.5 15h9"/>',
+      trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/>',
+      clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+      vault: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M12 8.5V7M12 17v-1.5M15.5 12H17M7 12h1.5"/>',
+      chart: '<path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/>',
+      users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/>',
+      link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+      trash: '<path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+      swap: '<path d="M7 7h11l-3-3M17 17H6l3 3"/>',
+    };
+    return `<svg class="d2-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${P2[name] || ''}</svg>`;
+  }
+
+  /* ---------- data ---------- */
+  function idb() { return new Promise((res) => { try { const r = indexedDB.open('rsd2db', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } }); }
+  function iget(db, k) { return new Promise((res) => { if (!db) return res(null); try { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch (e) { res(null); } }); }
+  function iput(db, k, v) { return new Promise((res) => { if (!db) return res(); try { const tx = db.transaction('kv', 'readwrite'); const s = tx.objectStore('kv'); s.clear(); s.put(v, k); s.put(k.slice(2), 'last'); tx.oncomplete = res; tx.onerror = res; } catch (e) { res(); } }); }
+  async function load() {
+    const db = await idb();
+    let meta = null;
+    try { const r = await fetch(CDN + 'meta.json', { cache: 'no-cache' }); if (r.ok) meta = await r.json(); } catch (e) { meta = null; }
+    if (meta && meta.v) {
+      const hit = await iget(db, 'v:' + meta.v);
+      if (hit) return hit;
+      APP.innerHTML = '<p class="d2-load">Downloading the Destiny 2 item database&hellip;</p>';
+      const parts = await Promise.all(['weapons', 'armor', 'perks', 'sets', 'groups'].map((k) => fetch(CDN + k + '.json').then((r) => { if (!r.ok) throw new Error(k); return r.json(); })));
+      const data = { meta, weapons: parts[0], armor: parts[1], perks: parts[2], sets: parts[3], groups: parts[4] };
+      try { const c = await fetch(CDN + 'curated.json', { cache: 'no-cache' }); if (c.ok) data.curated = await c.json(); } catch (e) { /* optional */ }
+      await iput(db, 'v:' + meta.v, data);
+      return data;
+    }
+    const last = await iget(db, 'last');
+    const old = last ? await iget(db, 'v:' + last) : null;
+    if (old) return old;
+    throw new Error('The item database is not available right now. Please try again in a few minutes.');
+  }
+  function index() {
+    P = D.perks;
+    D.W = D.weapons.filter((w) => w.n && w.pk);
+    D.A = D.armor;
+    D.WH = {}; D.W.forEach((w) => { D.WH[w.h] = w; });
+    D.AH = {}; D.A.forEach((a) => { D.AH[a.h] = a; });
+    D.types = Array.from(new Set(D.W.map((w) => w.ty))).sort();
+    D.newest = Math.max.apply(null, D.W.map((w) => rel(w.rel)).concat(D.A.map((a) => rel(a.rel))));
+    D.W.forEach((w) => { w.frn = pn(w.fr); w.peerKey = w.r === 'exotic' ? w.ty + '|' + w.rpm : w.ty + '|' + w.frn; w.txt = (w.n + ' ' + w.ty + ' ' + w.frn + ' ' + w.el + ' ' + w.src + ' ' + w.pk.map((c) => c.map(pn).join(' ')).join(' ')).toLowerCase(); });
+    D.peers = {}; D.W.forEach((w) => { if (w.ad) return; (D.peers[w.peerKey] = D.peers[w.peerKey] || []).push(w); });
+    D.A.forEach((a) => { const ex = perk(a.ex); const st = a.set && D.sets[a.set]; a.a3 = !!(a.at || a.set); a.txt = (a.n + ' ' + a.ty + ' ' + (ex ? ex.n + ' ' + ex.d : '') + ' ' + (st ? st.n : '') + ' ' + a.src).toLowerCase(); });
+  }
+
+  /* ---------- weapon stats ---------- */
+  function interp(v, g) {
+    if (!g || !g.p || !g.p.length) return v;
+    const p = g.p; v = Math.max(0, Math.min(v, g.m || v));
+    if (v <= p[0][0]) return p[0][1];
+    for (let i = 1; i < p.length; i++) if (v <= p[i][0]) { const a = p[i - 1], b = p[i]; return Math.round(a[1] + ((v - a[0]) * (b[1] - a[1])) / (b[0] - a[0] || 1)); }
+    return p[p.length - 1][1];
+  }
+  function wStats(w, sel) {
+    const out = Object.assign({}, w.s);
+    if (!sel || !sel.length) return out;
+    const g = D.groups[w.sg] || {};
+    const add = {};
+    sel.forEach((h) => { const p = perk(h); if (p && p.s) for (const k in p.s) add[k] = (add[k] || 0) + p.s[k]; });
+    for (const k in add) {
+      const base = w.inv[k] || 0;
+      if (g[k]) out[k] = (w.s[k] || 0) + interp(base + add[k], g[k]) - interp(base, g[k]);
+      else out[k] = (w.s[k] || 0) + add[k];
+      if (k !== 'Rounds Per Minute') out[k] = Math.max(0, Math.min(100, out[k]));
+    }
+    return out;
+  }
+  function statRows(stats, base, peerMax) {
+    const rows = [];
+    const order = D.meta.statOrder || KEY_STATS;
+    order.forEach((k) => {
+      if (stats[k] == null) return;
+      const v = stats[k], b = base ? base[k] : v, diff = v - (b == null ? v : b);
+      const numeric = NUM_STATS.indexOf(k) > -1 || (D.meta.stats[k] && D.meta.stats[k].bar === 0);
+      const tip = D.meta.stats[k] ? D.meta.stats[k].d : '';
+      if (numeric) { rows.push(`<div class="d2-st d2-st--n"><dt title="${esc(tip)}">${esc(k)}</dt><dd><b>${v}</b>${diff ? `<em class="${diff > 0 ? 'up' : 'dn'}">${diff > 0 ? '+' : ''}${diff}</em>` : ''}</dd></div>`); return; }
+      const pm = peerMax && peerMax[k];
+      rows.push(`<div class="d2-st"><dt title="${esc(tip)}">${esc(k)}</dt><dd><span class="d2-bar" role="img" aria-label="${esc(k)} ${v} out of 100"><i style="width:${Math.min(100, b == null ? v : Math.min(v, b))}%"></i>${diff > 0 ? `<i class="up" style="left:${Math.min(100, b)}%;width:${Math.min(100 - b, diff)}%"></i>` : ''}${diff < 0 ? `<i class="dn" style="left:${Math.max(0, v)}%;width:${-diff}%"></i>` : ''}${pm ? `<s style="left:${Math.min(100, pm)}%" title="Best in class: ${pm}"></s>` : ''}</span><b>${v}</b>${diff ? `<em class="${diff > 0 ? 'up' : 'dn'}">${diff > 0 ? '+' : ''}${diff}</em>` : ''}</dd></div>`);
+    });
+    return `<dl class="d2-stats">${rows.join('')}</dl>`;
+  }
+
+  /* ---------- shared UI ---------- */
+  const TOOLS = [
+    ['weapons', 'Weapons database', PAGE.weapons, 'kinetic'],
+    ['armor', 'Armor database', PAGE.armor, 'helmet'],
+    ['build', 'Build planner', PAGE.build, 'build'],
+    ['top', 'Best weapons & armor', PAGE.top, 'trophy'],
+    ['vault', 'Vault manager', '/pages/destiny-2-vault-manager', 'vault'],
+    ['stats', 'Stats tracker', '/pages/destiny-2-stats', 'chart'],
+    ['hub', 'Player hub', '/pages/player-hub', 'users'],
+  ];
+  function hubNav() {
+    return `<nav class="d2-hub" aria-label="Destiny 2 tools">${TOOLS.map((t) => `<a class="d2-hub__a${t[0] === MODE ? ' is-on' : ''}" href="${t[2]}"${t[0] === MODE ? ' aria-current="page"' : ''}>${ico(t[3])}<span>${esc(t[1])}</span></a>`).join('')}</nav>`;
+  }
+  function chips(name, opts, val, label) {
+    return `<fieldset class="d2-chips"><legend>${esc(label)}</legend>${opts.map((o) => { const v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o; return `<label class="d2-chip"><input type="radio" name="${name}" value="${esc(v)}"${String(val) === String(v) ? ' checked' : ''}><span>${esc(t)}</span></label>`; }).join('')}</fieldset>`;
+  }
+  function sel(name, opts, val, label) {
+    return `<label class="d2-sel"><span>${esc(label)}</span><select name="${name}">${opts.map((o) => { const v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o; return `<option value="${esc(v)}"${String(val) === String(v) ? ' selected' : ''}>${esc(t)}</option>`; }).join('')}</select></label>`;
+  }
+  function elemBadge(e) { const m = D.meta.elements && D.meta.elements[e]; return `<span class="d2-el d2-el--${esc((e || '').toLowerCase())}">${m && m.ic ? img(m.ic, 16, '') : ''}${esc(e)}</span>`; }
+  function tile(it, kind) {
+    const ex = it.r === 'exotic';
+    const sub = kind === 'w' ? `${esc(it.ty)} · ${elemBadge(it.el)}` : `${esc(CLSN[it.cl] || '')} · ${esc(SLOTN[it.sl] || it.ty)}`;
+    const extra = kind === 'w' ? `<span class="d2-card__k">${esc(it.frn || '')}${it.rpm ? ` · ${it.rpm} ${it.s['Charge Time'] && it.rpm === it.s['Charge Time'] ? 'ms' : it.s['Draw Time'] && it.rpm === it.s['Draw Time'] ? 'ms' : 'RPM'}` : ''}</span>` : `<span class="d2-card__k">${it.ex ? esc(pn(it.ex)) : it.set && D.sets[it.set] ? esc(D.sets[it.set].n) + ' set' : esc(it.ty)}</span>`;
+    const isNew = rel(it.rel) && rel(it.rel) >= D.newest - 1;
+    return `<button type="button" class="d2-card${ex ? ' is-exotic' : ''}" data-open="${kind}${it.h}"><span class="d2-card__img">${img(it.ic, 72, '')}${it.wm ? img(it.wm, 72, '', 'd2-wm') : ''}</span><span class="d2-card__t"><b>${esc(it.n)}${it.ad ? ' <small>(Adept)</small>' : ''}</b><span class="d2-card__s">${sub}</span>${extra}</span>${isNew ? '<span class="d2-new">New</span>' : ''}</button>`;
+  }
+
+  /* ---------- compare tray ---------- */
+  const CMP_KEY = 'rs_d2_cmp';
+  function cmpGet() { try { return JSON.parse(sessionStorage.getItem(CMP_KEY) || '[]'); } catch (e) { return []; } }
+  function cmpSet(a) { try { sessionStorage.setItem(CMP_KEY, JSON.stringify(a)); } catch (e) { /* ignore */ } tray(); }
+  function cmpToggle(key) {
+    let a = cmpGet();
+    if (a.indexOf(key) > -1) a = a.filter((x) => x !== key);
+    else { if (a.length && a[0][0] !== key[0]) { a = []; toast('Compare holds one kind at a time. Started a new comparison.'); } if (a.length >= 4) a.shift(); a.push(key); }
+    cmpSet(a);
+  }
+  function tray() {
+    let t = $('#d2-tray');
+    const a = cmpGet().filter((k) => (k[0] === 'w' ? D.WH[k.slice(1)] : D.AH[k.slice(1)]));
+    if (!a.length) { if (t) t.remove(); return; }
+    if (!t) { t = document.createElement('div'); t.id = 'd2-tray'; t.className = 'd2-tray'; t.setAttribute('role', 'region'); t.setAttribute('aria-label', 'Compare tray'); document.body.appendChild(t); }
+    t.innerHTML = `<div class="d2-tray__in"><span class="d2-tray__k">${ico('compare')}Compare</span><div class="d2-tray__its">${a.map((k) => { const it = k[0] === 'w' ? D.WH[k.slice(1)] : D.AH[k.slice(1)]; return `<span class="d2-tray__it">${img(it.ic, 36, '')}<span>${esc(it.n)}</span><button type="button" data-cmp-x="${k}" aria-label="Remove ${esc(it.n)}">${ico('close')}</button></span>`; }).join('')}</div><button type="button" class="rs-btn" data-cmp-go${a.length < 2 ? ' disabled' : ''}>Compare ${a.length}</button><button type="button" class="d2-link" data-cmp-clear>Clear</button></div>`;
+    t.onclick = (e) => {
+      const x = e.target.closest('[data-cmp-x]'); if (x) return cmpToggle(x.dataset.cmpX);
+      if (e.target.closest('[data-cmp-clear]')) return cmpSet([]);
+      if (e.target.closest('[data-cmp-go]')) compareView(a);
+    };
+  }
+  function compareView(keys) {
+    const items = keys.map((k) => (k[0] === 'w' ? { k: 'w', it: D.WH[k.slice(1)] } : { k: 'a', it: D.AH[k.slice(1)] }));
+    let body;
+    if (items[0].k === 'w') {
+      const stats = (D.meta.statOrder || KEY_STATS).filter((s) => items.some((x) => x.it.s[s] != null));
+      const best = {}; stats.forEach((s) => { best[s] = Math.max.apply(null, items.map((x) => x.it.s[s] || 0)); });
+      body = `<div class="d2-cmp" style="--n:${items.length}"><div class="d2-cmp__row d2-cmp__hd"><span></span>${items.map((x) => `<span>${img(x.it.ic, 56, '')}<b>${esc(x.it.n)}</b><small>${esc(x.it.ty)} · ${esc(x.it.frn)}</small><small>${elemBadge(x.it.el)} · ${esc(x.it.am)}</small></span>`).join('')}</div>` +
+        stats.map((s) => `<div class="d2-cmp__row"><span class="d2-cmp__k">${esc(s)}</span>${items.map((x) => { const v = x.it.s[s]; const bar = NUM_STATS.indexOf(s) < 0 && !(D.meta.stats[s] && D.meta.stats[s].bar === 0); return `<span class="${v === best[s] && items.length > 1 && v != null ? 'is-best' : ''}">${v == null ? '—' : bar ? `<span class="d2-bar"><i style="width:${Math.min(100, v)}%"></i></span><b>${v}</b>` : `<b>${v}</b>`}</span>`; }).join('')}</div>`).join('') +
+        `<div class="d2-cmp__row"><span class="d2-cmp__k">Frame</span>${items.map((x) => `<span>${esc(x.it.frn)}</span>`).join('')}</div><div class="d2-cmp__row"><span class="d2-cmp__k">Source</span>${items.map((x) => `<span><small>${esc(x.it.src || '—')}</small></span>`).join('')}</div></div>`;
+    } else {
+      body = `<div class="d2-cmp" style="--n:${items.length}"><div class="d2-cmp__row d2-cmp__hd"><span></span>${items.map((x) => `<span>${img(x.it.ic, 56, '')}<b>${esc(x.it.n)}</b><small>${esc(CLSN[x.it.cl])} · ${esc(SLOTN[x.it.sl])}</small></span>`).join('')}</div>` +
+        `<div class="d2-cmp__row"><span class="d2-cmp__k">Exotic perk</span>${items.map((x) => `<span>${x.it.ex ? `<b>${esc(pn(x.it.ex))}</b><small>${esc(perk(x.it.ex).d)}</small>` : '—'}</span>`).join('')}</div>` +
+        `<div class="d2-cmp__row"><span class="d2-cmp__k">Set bonus</span>${items.map((x) => { const st = x.it.set && D.sets[x.it.set]; return `<span>${st ? `<b>${esc(st.n)}</b>${st.p.map((p) => `<small>${p[0]} pieces: ${esc(p[1])}</small>`).join('')}` : '—'}</span>`; }).join('')}</div>` +
+        `<div class="d2-cmp__row"><span class="d2-cmp__k">Archetypes</span>${items.map((x) => `<span><small>${(x.it.at || []).map((h) => esc(pn(h))).join(', ') || '—'}</small></span>`).join('')}</div>` +
+        `<div class="d2-cmp__row"><span class="d2-cmp__k">Stat rolls</span>${items.map((x) => `<span><small>${(x.it.ro || []).map((r, i) => ['Primary', 'Secondary', 'Tertiary'][i] + ' ' + r[0] + '–' + r[1]).join('<br>') || '—'}</small></span>`).join('')}</div>` +
+        `<div class="d2-cmp__row"><span class="d2-cmp__k">Source</span>${items.map((x) => `<span><small>${esc(x.it.src || '—')}</small></span>`).join('')}</div></div>`;
+    }
+    sheet(`<h2 class="d2-sh__h">${ico('compare')}Side-by-side compare</h2><p class="d2-sh__sub">Base stats before masterwork, mods and perks. Best value in each row is highlighted.</p>${body}`, 'wide');
+  }
+
+  /* ---------- sheet (detail drawer) ---------- */
+  let lastFocus = null;
+  function sheet(html, wide) {
+    let s = $('#d2-sheet');
+    if (!s) { s = document.createElement('div'); s.id = 'd2-sheet'; s.className = 'd2-sheet'; document.body.appendChild(s); }
+    lastFocus = document.activeElement;
+    s.innerHTML = `<div class="d2-sh${wide ? ' d2-sh--wide' : ''}" role="dialog" aria-modal="true" tabindex="-1"><button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button>${html}</div>`;
+    s.hidden = false; document.documentElement.classList.add('d2-noscroll');
+    const d = $('.d2-sh', s); d.focus();
+    s.onclick = (e) => { if (e.target === s || e.target.closest('[data-sh-close]')) closeSheet(); };
+    return d;
+  }
+  function closeSheet() {
+    const s = $('#d2-sheet'); if (!s || s.hidden) return;
+    s.hidden = true; s.innerHTML = ''; document.documentElement.classList.remove('d2-noscroll');
+    if (location.hash && /^#(w|a)\d+$/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+
+  /* ---------- weapon detail ---------- */
+  function rankIn(peers, w, stat) {
+    const vals = peers.filter((p) => p.s[stat] != null).map((p) => p.s[stat]).sort((a, b) => b - a);
+    if (!vals.length || w.s[stat] == null) return null;
+    const r = vals.indexOf(w.s[stat]) + 1;
+    return { r, n: vals.length, max: vals[0], avg: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) };
+  }
+  function openWeapon(w) {
+    const peers = (D.peers[w.peerKey] || []).filter((p) => p.h !== w.h);
+    const all = peers.concat([w]);
+    const pmax = {}; (D.meta.statOrder || KEY_STATS).forEach((k) => { const v = all.map((p) => p.s[k]).filter((x) => x != null); if (v.length > 1) pmax[k] = Math.max.apply(null, v); });
+    const selected = w.pk.map(() => null);
+    const frame = perk(w.fr);
+    const cols = w.pk.map((c, i) => `<div class="d2-col"><p class="d2-col__k">${esc(colName(c, i))}</p>${c.map((h) => { const p = perk(h); return `<button type="button" class="d2-perk${p.e ? ' is-enh' : ''}" data-col="${i}" data-perk="${h}" aria-pressed="false" title="${esc(p.n)}">${img(p.i, 36, '')}<span>${esc(p.n)}</span></button>`; }).join('')}</div>`).join('');
+    const keyStats = (D.meta.statOrder || KEY_STATS).filter((k) => w.s[k] != null && NUM_STATS.indexOf(k) < 0 && !(D.meta.stats[k] && D.meta.stats[k].bar === 0));
+    const ranks = keyStats.map((k) => { const r = rankIn(all, w, k); return r && r.n > 1 ? `<li><b>${esc(k)}</b> <span>#${r.r} of ${r.n}</span> <small>${w.s[k]} vs avg ${r.avg}, best ${r.max}</small></li>` : ''; }).join('');
+    const best = keyStats.map((k) => ({ k, r: rankIn(all, w, k) })).filter((x) => x.r && x.r.n > 2);
+    const strong = best.filter((x) => x.r.r === 1).map((x) => x.k), weak = best.filter((x) => x.r.r === x.r.n).map((x) => x.k);
+    const verdict = peers.length ? `<p class="d2-verdict">${strong.length ? `Best ${esc(w.frn || w.ty)} ${esc(w.ty)} for <b>${esc(strong.slice(0, 3).join(', '))}</b>. ` : ''}${weak.length ? `Lowest for <b>${esc(weak.slice(0, 3).join(', '))}</b>. ` : ''}Compared with ${peers.length} other ${esc(w.r === 'exotic' ? w.ty + 's at ' + w.rpm + ' RPM' : (w.frn || '') + ' ' + w.ty + 's')} in the database.</p>` : '<p class="d2-verdict">No other weapon shares this frame, so it has no direct rivals in the database.</p>';
+    const sortStat = keyStats.indexOf('Range') > -1 ? 'Range' : keyStats[0];
+    const peerTable = peers.length ? `<div class="d2-peers"><div class="d2-peers__hd"><h3>Similar weapons</h3>${sel('pst', keyStats.map((k) => [k, 'Sort by ' + k]), sortStat, 'Sort similar weapons')}</div><div class="d2-peers__t" data-peers></div></div>` : '';
+    const d = sheet(`<div class="d2-det${w.r === 'exotic' ? ' is-exotic' : ''}"><header class="d2-det__hd">${img(w.ic, 96, w.n)}${w.wm ? img(w.wm, 96, '', 'd2-wm') : ''}<div><p class="d2-det__k">${w.r === 'exotic' ? 'Exotic' : 'Legendary'} ${esc(w.ty)}${w.ad ? ' · Adept' : ''}${w.cr ? ' · Craftable' : ''}</p><h2 class="d2-det__h">${esc(w.n)}</h2><p class="d2-det__m">${elemBadge(w.el)}<span>${ico(w.sl)}${esc(SLOTN[w.sl])}</span><span class="d2-ammo d2-ammo--${esc(w.am)}">${esc(cap(w.am))} ammo</span>${w.br ? `<span>${esc(w.br)}</span>` : ''}</p>${w.fl ? `<p class="d2-det__fl">${esc(w.fl)}</p>` : ''}</div></header>
+      <div class="d2-det__grid"><section><h3>Stats</h3><div data-wstats>${statRows(w.s, null, pmax)}</div><p class="d2-fine">Select perks below to see how they change the stats. The tick on each bar is the best value among similar weapons. Stats are before masterwork and mods.</p></section>
+      <section><h3>Frame</h3>${frame ? `<div class="d2-frame">${img(frame.i, 40, '')}<div><b>${esc(frame.n)}</b><p>${esc(frame.d)}</p></div></div>` : ''}<h3>How it compares</h3>${verdict}${ranks ? `<ul class="d2-ranks">${ranks}</ul>` : ''}<h3>Where to get it</h3><p>${esc(w.src || 'Source not listed by Bungie.')}</p></section></div>
+      <section class="d2-perks"><h3>Perks <small>${w.r === 'exotic' ? 'Exotic weapons have a fixed roll' : 'Tap one perk per column to build your god roll'}</small></h3><div class="d2-cols">${cols}</div><div class="d2-perkinfo" data-perkinfo aria-live="polite"><p>Tap a perk to read what it does.</p></div></section>
+      ${peerTable}
+      <div class="d2-det__act"><button type="button" class="rs-btn" data-add-build="w${w.h}">${ico('build')}Add to build</button><button type="button" class="rs-btn rs-btn--ghost" data-cmp="w${w.h}">${ico('compare')}${cmpGet().indexOf('w' + w.h) > -1 ? 'In compare' : 'Compare'}</button><button type="button" class="rs-btn rs-btn--ghost" data-copy-link="#w${w.h}">${ico('link')}Copy link</button></div></div>`);
+    history.replaceState(null, '', '#w' + w.h);
+    function drawPeers() {
+      const box = $('[data-peers]', d); if (!box) return;
+      const st = ($('select[name=pst]', d) || {}).value || sortStat;
+      const list = all.slice().sort((a, b) => (b.s[st] || 0) - (a.s[st] || 0)).slice(0, 14);
+      const cols2 = ['Impact', 'Range', 'Stability', 'Handling', 'Reload Speed'].filter((k) => keyStats.indexOf(k) > -1);
+      box.innerHTML = `<table class="d2-tbl"><thead><tr><th scope="col">Weapon</th>${cols2.map((k) => `<th scope="col"${k === st ? ' class="is-sort"' : ''}>${esc(k.replace(' Speed', ''))}</th>`).join('')}${keyStats.indexOf(st) > -1 && cols2.indexOf(st) < 0 ? `<th scope="col" class="is-sort">${esc(st)}</th>` : ''}</tr></thead><tbody>${list.map((p) => `<tr${p.h === w.h ? ' class="is-me"' : ''}><th scope="row"><button type="button" class="d2-link" data-open="w${p.h}">${img(p.ic, 28, '')}${esc(p.n)}</button></th>${cols2.map((k) => `<td${k === st ? ' class="is-sort"' : ''}>${p.s[k] == null ? '—' : p.s[k]}</td>`).join('')}${keyStats.indexOf(st) > -1 && cols2.indexOf(st) < 0 ? `<td class="is-sort">${p.s[st] == null ? '—' : p.s[st]}</td>` : ''}</tr>`).join('')}</tbody></table>`;
+    }
+    drawPeers();
+    d.addEventListener('change', (e) => { if (e.target.name === 'pst') drawPeers(); });
+    d.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-perk]');
+      if (b) {
+        const i = +b.dataset.col, h = +b.dataset.perk;
+        selected[i] = selected[i] === h ? null : h;
+        $$('[data-col="' + i + '"]', d).forEach((x) => x.setAttribute('aria-pressed', String(+x.dataset.perk === selected[i])));
+        const p = perk(h);
+        $('[data-perkinfo]', d).innerHTML = `<div class="d2-frame">${img(p.i, 40, '')}<div><b>${esc(p.n)}</b>${p.e ? ' <small class="d2-enh">Enhanced</small>' : ''}<p>${esc(p.d || 'Bungie has no description for this perk.')}</p>${p.s ? `<p class="d2-fine">${Object.keys(p.s).map((k) => `${esc(k)} ${p.s[k] > 0 ? '+' : ''}${p.s[k]}`).join(' · ')}</p>` : ''}${p.cs ? `<p class="d2-fine">When active: ${Object.keys(p.cs).map((k) => `${esc(k)} ${p.cs[k] > 0 ? '+' : ''}${p.cs[k]}`).join(' · ')}</p>` : ''}</div></div>`;
+        $('[data-wstats]', d).innerHTML = statRows(wStats(w, selected.filter(Boolean)), w.s, pmax);
+        return;
+      }
+      const o = e.target.closest('[data-open]'); if (o) return openKey(o.dataset.open);
+      actions(e);
+    });
+  }
+  function colName(c, i) {
+    const cat = perk(c[0]) ? perk(c[0]).c : '';
+    if (/barrel|tubes|bowstring|blades|haft|scope/i.test(cat)) return 'Barrel / sight';
+    if (/magazine|arrows|batter|guards/i.test(cat)) return 'Magazine';
+    if (/frames/i.test(cat)) return i < 3 ? 'Trait ' + (i - 1) : 'Trait';
+    if (/origins/i.test(cat)) return 'Origin trait';
+    if (/stocks|grips/i.test(cat)) return 'Grip / stock';
+    return 'Column ' + (i + 1);
+  }
+  function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : ''; }
+
+  /* ---------- armor detail ---------- */
+  function openArmor(a) {
+    const ex = perk(a.ex), st = a.set && D.sets[a.set];
+    const arch = (a.at || []).map((h) => { const p = perk(h); return `<li>${img(p.i, 28, '')}<b>${esc(p.n)}</b><small>${p.pr ? esc(p.pr) + ' primary' : ''}${p.se ? ' · ' + esc(p.se) + ' secondary' : ''}</small></li>`; }).join('');
+    const ro = (a.ro || []).map((r, i) => `<li><b>${['Primary stat', 'Secondary stat', 'Tertiary stat'][i] || 'Stat'}</b> <span>${r[0]}–${r[1]}</span></li>`).join('');
+    const total = (a.ro || []).reduce((t, r) => [t[0] + r[0], t[1] + r[1]], [0, 0]);
+    const d = sheet(`<div class="d2-det${a.r === 'exotic' ? ' is-exotic' : ''}"><header class="d2-det__hd">${img(a.ic, 96, a.n)}${a.wm ? img(a.wm, 96, '', 'd2-wm') : ''}<div><p class="d2-det__k">${a.r === 'exotic' ? 'Exotic' : 'Legendary'} ${esc(SLOTN[a.sl] || a.ty)} · ${esc(CLSN[a.cl])}</p><h2 class="d2-det__h">${esc(a.n)}</h2>${a.fl ? `<p class="d2-det__fl">${esc(a.fl)}</p>` : ''}</div></header>
+      <div class="d2-det__grid"><section>${ex ? `<h3>Exotic perk</h3><div class="d2-frame">${img(ex.i, 40, '')}<div><b>${esc(ex.n)}</b><p>${esc(ex.d)}</p></div></div>` : ''}${st ? `<h3>Set bonus: ${esc(st.n)}</h3><ul class="d2-setp">${st.p.map((p) => `<li><b>${p[0]} pieces · ${esc(p[1])}</b><p>${esc(p[2])}</p></li>`).join('')}</ul>` : ''}${!ex && !st ? '<h3>Perks</h3><p>No exotic perk or set bonus on this piece.</p>' : ''}<h3>Where to get it</h3><p>${esc(a.src || 'Source not listed by Bungie.')}</p></section>
+      <section>${ro ? `<h3>Stat rolls</h3><ul class="d2-ranks">${ro}</ul><p class="d2-fine">Armor 3.0 pieces roll a primary and secondary stat from their archetype, plus one random tertiary stat. This piece totals ${total[0]}–${total[1]} before tuning and mods. Higher gear tiers roll closer to the top of each range.</p>` : '<h3>Stats</h3><p>This is older armor; its stats are set per drop, so they are not in Bungie\'s item data.</p>'}${arch ? `<h3>Possible archetypes</h3><ul class="d2-arch">${arch}</ul>` : ''}</section></div>
+      <div class="d2-det__act"><button type="button" class="rs-btn" data-add-build="a${a.h}">${ico('build')}Add to build</button><button type="button" class="rs-btn rs-btn--ghost" data-cmp="a${a.h}">${ico('compare')}${cmpGet().indexOf('a' + a.h) > -1 ? 'In compare' : 'Compare'}</button><button type="button" class="rs-btn rs-btn--ghost" data-copy-link="#a${a.h}">${ico('link')}Copy link</button></div></div>`);
+    history.replaceState(null, '', '#a' + a.h);
+    d.addEventListener('click', actions);
+  }
+  function openKey(k) { if (k[0] === 'w' && D.WH[k.slice(1)]) openWeapon(D.WH[k.slice(1)]); else if (k[0] === 'a' && D.AH[k.slice(1)]) openArmor(D.AH[k.slice(1)]); }
+  function actions(e) {
+    const c = e.target.closest('[data-cmp]');
+    if (c) { cmpToggle(c.dataset.cmp); c.lastChild.textContent = cmpGet().indexOf(c.dataset.cmp) > -1 ? 'In compare' : 'Compare'; return; }
+    const ab = e.target.closest('[data-add-build]');
+    if (ab) { addToBuild(ab.dataset.addBuild); return; }
+    const cl = e.target.closest('[data-copy-link]');
+    if (cl) { const u = location.origin + location.pathname + cl.dataset.copyLink; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast('Link copied'), () => toast(u)); }
+  }
+
+  /* ---------- browse views ---------- */
+  const PER = 60;
+  function weaponsView() {
+    const q = new URLSearchParams(location.search);
+    const st = { q: q.get('q') || '', slot: q.get('slot') || 'all', ty: q.get('type') || 'all', el: q.get('el') || 'all', am: q.get('ammo') || 'all', r: q.get('rarity') || 'all', fr: q.get('frame') || 'all', sort: q.get('sort') || 'newest', min: +(q.get('min') || 0), craft: q.get('craft') === '1', adept: q.get('adept') === '1', n: PER };
+    APP.innerHTML = `${hubNav()}<form class="d2-f" data-f role="search" aria-label="Filter weapons" onsubmit="return false">
+      <label class="d2-q"><span class="rs-sr">Search weapons, perks or frames</span>${ico('filter')}<input type="search" name="q" value="${esc(st.q)}" placeholder="Search a weapon, perk, frame or source" autocomplete="off"></label>
+      ${chips('slot', [['all', 'All slots'], ['kinetic', 'Kinetic'], ['energy', 'Energy'], ['power', 'Power']], st.slot, 'Slot')}
+      ${chips('el', [['all', 'All elements']].concat(ELEM.map((e) => [e, e])), st.el, 'Element')}
+      <div class="d2-f__row">${sel('type', [['all', 'All weapon types']].concat(D.types.map((t) => [t, t])), st.ty, 'Type')}${sel('frame', [['all', 'All frames']], st.fr, 'Frame')}${sel('ammo', [['all', 'All ammo'], ['primary', 'Primary'], ['special', 'Special'], ['heavy', 'Heavy']], st.am, 'Ammo')}${sel('rarity', [['all', 'Legendary + Exotic'], ['legendary', 'Legendary'], ['exotic', 'Exotic']], st.r, 'Rarity')}
+      ${sel('sort', [['newest', 'Newest first'], ['name', 'Name A–Z']].concat(KEY_STATS.slice(0, 10).map((k) => [k, 'Highest ' + k])).concat([['Rounds Per Minute', 'Highest RPM']]), st.sort, 'Sort')}
+      <label class="d2-sel d2-sel--rng"><span>Minimum <b data-minlbl>${esc(statOf(st.sort))}</b>: <output data-minv>${st.min}</output></span><input type="range" name="min" min="0" max="100" step="5" value="${st.min}"${KEY_STATS.indexOf(st.sort) < 0 ? ' disabled' : ''}></label>
+      <label class="d2-tog"><input type="checkbox" name="craft"${st.craft ? ' checked' : ''}><span>Craftable only</span></label><label class="d2-tog"><input type="checkbox" name="adept"${st.adept ? ' checked' : ''}><span>Include Adept</span></label><button type="button" class="d2-link" data-reset>Reset filters</button></div></form>
+      <p class="d2-count" data-count aria-live="polite"></p><div class="d2-grid" data-grid></div><p class="d2-more"><button type="button" class="rs-btn rs-btn--ghost" data-more hidden>Show more</button></p>`;
+    const f = $('[data-f]', APP);
+    function frames() {
+      const fs = Array.from(new Set(D.W.filter((w) => (st.ty === 'all' || w.ty === st.ty) && w.r === 'legendary' && w.frn).map((w) => w.frn))).sort();
+      const s = $('select[name=frame]', f);
+      s.innerHTML = [['all', 'All frames']].concat(fs.map((x) => [x, x])).map((o) => `<option value="${esc(o[0])}"${o[0] === st.fr ? ' selected' : ''}>${esc(o[1])}</option>`).join('');
+      if (fs.indexOf(st.fr) < 0) st.fr = 'all';
+    }
+    function list() {
+      const qq = st.q.trim().toLowerCase();
+      let L = D.W.filter((w) => (st.adept || !w.ad) && (st.slot === 'all' || w.sl === st.slot) && (st.el === 'all' || w.el === st.el) && (st.ty === 'all' || w.ty === st.ty) && (st.am === 'all' || w.am === st.am) && (st.r === 'all' || w.r === st.r) && (st.fr === 'all' || w.frn === st.fr) && (!st.craft || w.cr) && (!qq || qq.split(/\s+/).every((t) => w.txt.indexOf(t) > -1)) && (!st.min || KEY_STATS.indexOf(st.sort) < 0 || (w.s[st.sort] || 0) >= st.min));
+      if (st.sort === 'name') L.sort((a, b) => a.n.localeCompare(b.n));
+      else if (st.sort === 'newest') L.sort((a, b) => rel(b.rel) - rel(a.rel) || a.n.localeCompare(b.n));
+      else L.sort((a, b) => (b.s[st.sort] || b.rpm * (st.sort === 'Rounds Per Minute') || 0) - (a.s[st.sort] || a.rpm * (st.sort === 'Rounds Per Minute') || 0) || a.n.localeCompare(b.n));
+      $('[data-count]', APP).textContent = `${L.length} weapon${L.length === 1 ? '' : 's'}${qq ? ` matching "${st.q.trim()}"` : ''}`;
+      $('[data-grid]', APP).innerHTML = L.slice(0, st.n).map((w) => tile(w, 'w')).join('') || '<p class="d2-empty">No weapons match. Try fewer filters.</p>';
+      const m = $('[data-more]', APP); m.hidden = L.length <= st.n; m.textContent = `Show more (${L.length - st.n} left)`;
+      syncURL({ q: st.q, slot: st.slot, type: st.ty, el: st.el, ammo: st.am, rarity: st.r, frame: st.fr, sort: st.sort, min: st.min || '', craft: st.craft ? 1 : '', adept: st.adept ? 1 : '' }, { slot: 'all', type: 'all', el: 'all', ammo: 'all', rarity: 'all', frame: 'all', sort: 'newest' });
+    }
+    frames(); list();
+    const upd = () => { const fd = new FormData(f); st.q = fd.get('q') || ''; st.slot = fd.get('slot'); st.el = fd.get('el'); const nt = fd.get('type'); if (nt !== st.ty) { st.ty = nt; frames(); } st.fr = $('select[name=frame]', f).value; st.am = fd.get('ammo'); st.r = fd.get('rarity'); st.sort = fd.get('sort'); st.craft = !!fd.get('craft'); st.adept = !!fd.get('adept'); const rg = $('input[name=min]', f); rg.disabled = KEY_STATS.indexOf(st.sort) < 0; st.min = rg.disabled ? 0 : +rg.value; $('[data-minv]', f).textContent = st.min; $('[data-minlbl]', f).textContent = statOf(st.sort); st.n = PER; list(); };
+    f.addEventListener('input', debounce(upd, 120)); f.addEventListener('change', upd);
+    $('[data-reset]', f).onclick = () => { history.replaceState(null, '', location.pathname); weaponsView(); };
+    $('[data-more]', APP).onclick = () => { st.n += PER; list(); };
+    APP.onclick = (e) => { const o = e.target.closest('[data-open]'); if (o) openKey(o.dataset.open); };
+  }
+  function statOf(s) { return KEY_STATS.indexOf(s) > -1 ? s : 'stat'; }
+  function syncURL(o, defs) { const p = new URLSearchParams(); Object.keys(o).forEach((k) => { const v = o[k]; if (v !== '' && v != null && v !== defs[k] && v !== 0) p.set(k, v); }); const s = p.toString(); history.replaceState(null, '', location.pathname + (s ? '?' + s : '') + location.hash); }
+
+  function armorView() {
+    const q = new URLSearchParams(location.search);
+    const st = { q: q.get('q') || '', cl: q.get('class') || 'all', sl: q.get('slot') || 'all', r: q.get('rarity') || 'all', set: q.get('set') || 'all', at: q.get('arch') || 'all', a3: q.get('all') !== '1', sort: q.get('sort') || 'newest', n: PER };
+    const sets = Object.keys(D.sets).map((k) => [k, D.sets[k].n]).sort((a, b) => a[1].localeCompare(b[1]));
+    const archs = Array.from(new Set(D.A.reduce((t, a) => t.concat(a.at || []), []))).map((h) => [String(h), pn(h)]).filter((x) => x[1]).sort((a, b) => a[1].localeCompare(b[1]));
+    const archByName = {}; archs.forEach((a) => { (archByName[a[1]] = archByName[a[1]] || []).push(+a[0]); });
+    const archOpts = Object.keys(archByName).sort().map((n) => { const p = perk(archByName[n][0]); return [n, n + (p && p.pr ? ` (${p.pr} / ${p.se})` : '')]; });
+    APP.innerHTML = `${hubNav()}<form class="d2-f" data-f role="search" aria-label="Filter armor" onsubmit="return false">
+      <label class="d2-q"><span class="rs-sr">Search armor, exotic perks or sets</span>${ico('filter')}<input type="search" name="q" value="${esc(st.q)}" placeholder="Search armor, an exotic perk, a set or a source" autocomplete="off"></label>
+      ${chips('class', [['all', 'All classes'], ['hunter', 'Hunter'], ['titan', 'Titan'], ['warlock', 'Warlock']], st.cl, 'Class')}
+      ${chips('slot', [['all', 'All slots']].concat(SLOTA.map((s) => [s, SLOTN[s]])), st.sl, 'Slot')}
+      <div class="d2-f__row">${sel('rarity', [['all', 'Legendary + Exotic'], ['legendary', 'Legendary'], ['exotic', 'Exotic']], st.r, 'Rarity')}${sel('set', [['all', 'Any set bonus'], ['none', 'No set']].concat(sets), st.set, 'Armor set')}${sel('arch', [['all', 'Any archetype']].concat(archOpts), st.at, 'Archetype')}${sel('sort', [['newest', 'Newest first'], ['name', 'Name A–Z']], st.sort, 'Sort')}
+      <label class="d2-tog"><input type="checkbox" name="all"${!st.a3 ? ' checked' : ''}><span>Include older armor</span></label><button type="button" class="d2-link" data-reset>Reset filters</button></div></form>
+      <p class="d2-count" data-count aria-live="polite"></p><div class="d2-grid" data-grid></div><p class="d2-more"><button type="button" class="rs-btn rs-btn--ghost" data-more hidden>Show more</button></p>`;
+    const f = $('[data-f]', APP);
+    function list() {
+      const qq = st.q.trim().toLowerCase();
+      const ah = st.at === 'all' ? null : archByName[st.at] || [];
+      let L = D.A.filter((a) => (!st.a3 || a.a3 || a.r === 'exotic') && (st.cl === 'all' || a.cl === st.cl) && (st.sl === 'all' || a.sl === st.sl) && (st.r === 'all' || a.r === st.r) && (st.set === 'all' || (st.set === 'none' ? !a.set : String(a.set) === st.set)) && (!ah || (a.at || []).some((h) => ah.indexOf(h) > -1)) && (!qq || qq.split(/\s+/).every((t) => a.txt.indexOf(t) > -1)));
+      if (st.sort === 'name') L.sort((a, b) => a.n.localeCompare(b.n)); else L.sort((a, b) => rel(b.rel) - rel(a.rel) || (b.r === 'exotic') - (a.r === 'exotic') || a.n.localeCompare(b.n));
+      $('[data-count]', APP).textContent = `${L.length} armor piece${L.length === 1 ? '' : 's'}${qq ? ` matching "${st.q.trim()}"` : ''}`;
+      $('[data-grid]', APP).innerHTML = L.slice(0, st.n).map((a) => tile(a, 'a')).join('') || '<p class="d2-empty">No armor matches. Try fewer filters.</p>';
+      const m = $('[data-more]', APP); m.hidden = L.length <= st.n; m.textContent = `Show more (${L.length - st.n} left)`;
+      syncURL({ q: st.q, class: st.cl, slot: st.sl, rarity: st.r, set: st.set, arch: st.at, sort: st.sort, all: st.a3 ? '' : 1 }, { class: 'all', slot: 'all', rarity: 'all', set: 'all', arch: 'all', sort: 'newest' });
+    }
+    list();
+    const upd = () => { const fd = new FormData(f); st.q = fd.get('q') || ''; st.cl = fd.get('class'); st.sl = fd.get('slot'); st.r = fd.get('rarity'); st.set = fd.get('set'); st.at = fd.get('arch'); st.sort = fd.get('sort'); st.a3 = !fd.get('all'); st.n = PER; list(); };
+    f.addEventListener('input', debounce(upd, 120)); f.addEventListener('change', upd);
+    $('[data-reset]', f).onclick = () => { history.replaceState(null, '', location.pathname); armorView(); };
+    $('[data-more]', APP).onclick = () => { st.n += PER; list(); };
+    APP.onclick = (e) => { const o = e.target.closest('[data-open]'); if (o) openKey(o.dataset.open); };
+  }
+
+  /* ---------- best gear (data-driven + curated) ---------- */
+  function topView() {
+    const leg = D.W.filter((w) => w.r === 'legendary' && !w.ad);
+    const newestW = D.W.filter((w) => !w.ad && rel(w.rel) >= D.newest - 1).sort((a, b) => (b.r === 'exotic') - (a.r === 'exotic') || a.n.localeCompare(b.n));
+    const newestA = D.A.filter((a) => a.r === 'exotic' && rel(a.rel) >= D.newest - 2);
+    const CAT = [['Hand Cannon', 'Range'], ['Auto Rifle', 'Stability'], ['Pulse Rifle', 'Range'], ['Scout Rifle', 'Range'], ['Submachine Gun', 'Handling'], ['Sidearm', 'Range'], ['Shotgun', 'Range'], ['Sniper Rifle', 'Aim Assistance'], ['Fusion Rifle', 'Range'], ['Grenade Launcher', 'Blast Radius'], ['Rocket Launcher', 'Blast Radius'], ['Linear Fusion Rifle', 'Range'], ['Machine Gun', 'Range'], ['Sword', 'Impact'], ['Bow', 'Accuracy'], ['Glaive', 'Range'], ['Trace Rifle', 'Range']];
+    const leaders = CAT.map((c) => { const L = leg.filter((w) => w.ty === c[0] && w.s[c[1]] != null).sort((a, b) => b.s[c[1]] - a.s[c[1]]).slice(0, 3); return L.length ? `<div class="d2-lead"><h3>${esc(c[0])}s <small>highest base ${esc(c[1])}</small></h3><ol>${L.map((w) => `<li><button type="button" class="d2-link" data-open="w${w.h}">${img(w.ic, 32, '')}<span>${esc(w.n)}</span></button><b>${w.s[c[1]]}</b><small>${esc(w.frn)}</small></li>`).join('')}</ol></div>` : ''; }).join('');
+    const cur = D.curated || null;
+    const curHtml = cur && cur.picks && cur.picks.length ? `<section class="d2-sec"><h2>${ico('star')}Community meta picks <small>Updated ${esc(cur.updated || '')}</small></h2><p class="d2-fine">${esc(cur.note || 'Picks reviewed by the RankSurge team from current community tier lists and patch notes.')}</p><div class="d2-grid">${cur.picks.map((p) => { const it = p.k === 'a' ? D.A.find((a) => a.n === p.n) : D.W.find((w) => w.n === p.n && !w.ad); return it ? `<div class="d2-pick">${tile(it, p.k === 'a' ? 'a' : 'w')}<p><b>${esc(p.tag || '')}</b> ${esc(p.why || '')}</p></div>` : ''; }).join('')}</div></section>` : '';
+    const exoBy = CLS.map((c) => { const L = newestA.filter((a) => a.cl === c); return L.length ? `<div><h3>${esc(CLSN[c])}</h3><div class="d2-grid d2-grid--s">${L.map((a) => tile(a, 'a')).join('')}</div></div>` : ''; }).join('');
+    APP.innerHTML = `${hubNav()}${curHtml}
+      <section class="d2-sec"><h2>${ico('clock')}New this season</h2><p class="d2-fine">Weapons added in the latest Destiny 2 releases, straight from Bungie's item data.</p><div class="d2-grid">${newestW.slice(0, 24).map((w) => tile(w, 'w')).join('')}</div><p class="d2-more"><a class="rs-btn rs-btn--ghost" href="${PAGE.weapons}?sort=newest">See every weapon</a></p></section>
+      ${exoBy ? `<section class="d2-sec"><h2>${ico('shield')}Newest exotic armor by class</h2>${exoBy}</section>` : ''}
+      <section class="d2-sec"><h2>${ico('chart')}Stat leaders by weapon type</h2><p class="d2-fine">The three legendary weapons with the highest base value in the stat that matters most for each type. Base stats only: perks, masterwork and mods change the final numbers.</p><div class="d2-leads">${leaders}</div></section>`;
+    APP.onclick = (e) => { const o = e.target.closest('[data-open]'); if (o) openKey(o.dataset.open); };
+  }
+
+  /* ---------- build planner ---------- */
+  const BKEY = 'rs_d2_builds';
+  function blank(c) { return { c: c || 'hunter', sub: 'Void', name: '', w: { kinetic: null, energy: null, power: null }, wp: {}, a: { helmet: null, arms: null, chest: null, legs: null, class: null }, ap: {} }; }
+  function bLoad() { try { const o = JSON.parse(localStorage.getItem(BKEY) || 'null'); if (o && o.A) return o; } catch (e) { /* ignore */ } return { A: blank('hunter'), B: blank('hunter'), cur: 'A' }; }
+  function bSave(S) { try { localStorage.setItem(BKEY, JSON.stringify(S)); } catch (e) { /* ignore */ } }
+  function enc(b) { return btoa(unescape(encodeURIComponent(JSON.stringify(b)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function dec(s) { try { return JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) { return null; } }
+  function addToBuild(key) {
+    const S = bLoad(), b = S[S.cur];
+    if (key[0] === 'w') { const w = D.WH[key.slice(1)]; if (!w) return; b.w[w.sl] = w.h; b.wp[w.sl] = []; }
+    else { const a = D.AH[key.slice(1)]; if (!a) return; if (a.cl !== 'any' && a.cl !== b.c) { b.c = a.cl; Object.keys(b.a).forEach((s) => { const x = D.AH[b.a[s]]; if (x && x.cl !== 'any' && x.cl !== a.cl) b.a[s] = null; }); } b.a[a.sl] = a.h; b.ap[a.sl] = { at: (a.at || [])[0] || null, t: null, g: 5 }; }
+    bSave(S);
+    if (MODE === 'build') { closeSheet(); buildView(); toast('Added to Build ' + S.cur); }
+    else toast('Added to Build ' + S.cur + '. Open the build planner to see the totals.');
+  }
+  function pieceStats(a, ap) {
+    const out = {}; AST.forEach((s) => { out[s] = 0; });
+    if (!a || !a.ro || !ap) return { s: out, est: false };
+    const arch = perk(ap.at), g = Math.max(1, Math.min(5, ap.g || 5));
+    const pick = (r) => Math.round(r[0] + ((r[1] - r[0]) * (g - 1)) / 4);
+    if (arch && arch.pr && a.ro[0]) out[arch.pr] += pick(a.ro[0]);
+    if (arch && arch.se && a.ro[1]) out[arch.se] += pick(a.ro[1]);
+    if (ap.t && a.ro[2] && (!arch || (ap.t !== arch.pr && ap.t !== arch.se))) out[ap.t] += pick(a.ro[2]);
+    return { s: out, est: true };
+  }
+  function buildTotals(b) {
+    const t = {}; AST.forEach((s) => { t[s] = 0; });
+    const sets = {}; let exA = 0, exW = 0, missing = 0;
+    SLOTA.forEach((sl) => {
+      const a = D.AH[b.a[sl]]; if (!a) { missing++; return; }
+      if (a.r === 'exotic') exA++;
+      const real = b.real && b.real[sl];
+      const ps = real ? { s: real } : pieceStats(a, b.ap[sl]);
+      AST.forEach((s) => { t[s] += ps.s[s] || 0; });
+      if (a.set) sets[a.set] = (sets[a.set] || 0) + 1;
+    });
+    SLOTW.forEach((sl) => { const w = D.WH[b.w[sl]]; if (w && w.r === 'exotic') exW++; });
+    const bonuses = []; Object.keys(sets).forEach((k) => { const st = D.sets[k]; if (!st) return; st.p.forEach((p) => { bonuses.push({ set: st.n, n: p[0], name: p[1], d: p[2], on: sets[k] >= p[0], have: sets[k] }); }); });
+    const warn = [];
+    if (exA > 1) warn.push('Only one exotic armor piece can be equipped. Swap one for a legendary.');
+    if (exW > 1) warn.push('Only one exotic weapon can be equipped. Swap one for a legendary.');
+    const wrong = SLOTA.filter((sl) => { const a = D.AH[b.a[sl]]; return a && a.cl !== 'any' && a.cl !== b.c; });
+    if (wrong.length) warn.push(`${wrong.map((s) => SLOTN[s]).join(', ')} ${wrong.length > 1 ? 'are' : 'is'} for another class.`);
+    const sub = b.sub, elemW = SLOTW.map((sl) => D.WH[b.w[sl]]).filter(Boolean).filter((w) => w.el === sub).length;
+    return { t, bonuses, warn, missing, elemW };
+  }
+  function buildView() {
+    const S = bLoad();
+    const h = location.hash.match(/^#b=([A-Za-z0-9_-]+)/);
+    if (h) { const b = dec(h[1]); if (b && b.w && b.a) { S[S.cur] = Object.assign(blank(b.c), b); bSave(S); toast('Build loaded from link'); } history.replaceState(null, '', location.pathname); }
+    if (S.cur === 'CMP') return buildCompare(S);
+    const b = S[S.cur];
+    const T = buildTotals(b);
+    const slotW = SLOTW.map((sl) => slotCard(b, sl, 'w')).join('');
+    const slotA = SLOTA.map((sl) => slotCard(b, sl, 'a')).join('');
+    const stats = AST.map((s) => { const v = T.t[s]; return `<div class="d2-ast"><span>${esc(s)}</span><span class="d2-bar d2-bar--200" role="img" aria-label="${esc(s)} ${v} out of 200"><i style="width:${Math.min(100, v / 2)}%"></i><s style="left:50%" title="100"></s></span><b>${v}</b></div>`; }).join('');
+    const total = AST.reduce((t, s) => t + T.t[s], 0);
+    APP.innerHTML = `${hubNav()}<div class="d2-bld">
+      <div class="d2-bld__tabs" role="tablist" aria-label="Builds">${['A', 'B'].map((k) => `<button type="button" role="tab" aria-selected="${S.cur === k}" data-btab="${k}">Build ${k}<small>${esc(S[k].name || CLSN[S[k].c])}</small></button>`).join('')}<button type="button" role="tab" aria-selected="false" data-btab="CMP">${ico('compare')}Compare A vs B</button></div>
+      <div class="d2-bld__top"><label class="d2-sel"><span>Build name</span><input type="text" name="bname" maxlength="40" value="${esc(b.name)}" placeholder="Like: Void Hunter for raids"></label>${chips('bcls', CLS.map((c) => [c, CLSN[c]]), b.c, 'Class')}${chips('bsub', SUBS.map((s) => [s, s]), b.sub, 'Subclass')}</div>
+      <div class="d2-bld__grid"><section><h2>Weapons</h2><div class="d2-slots">${slotW}</div><h2>Armor</h2><div class="d2-slots">${slotA}</div></section>
+      <aside class="d2-bld__sum" aria-label="Build totals"><h2>Build stats</h2><div class="d2-asts">${stats}</div><p class="d2-fine">Total ${total} from armor${b.real ? ' (your real rolls)' : ' (estimated from each piece\'s archetype, tertiary stat and gear tier)'}. Each stat goes to 200: 100 gives the full base effect, and points past 100 add an extra bonus. Mods, tuning and your subclass fragments add more in game.</p>
+      ${T.warn.length ? `<div class="d2-warn" role="alert">${T.warn.map((w) => `<p>${esc(w)}</p>`).join('')}</div>` : ''}
+      ${T.bonuses.length ? `<h3>Set bonuses</h3><ul class="d2-setp">${T.bonuses.map((x) => `<li class="${x.on ? 'is-on' : ''}"><b>${esc(x.set)} · ${x.n} pieces${x.on ? ' · Active' : ` · ${x.have}/${x.n}`}</b><p><i>${esc(x.name)}:</i> ${esc(x.d)}</p></li>`).join('')}</ul>` : ''}
+      <h3>Synergy</h3><p class="d2-fine">${T.elemW ? `${T.elemW} of your weapons match your ${esc(b.sub)} subclass, which helps with element-based perks, fragments and set bonuses.` : `None of your weapons match your ${esc(b.sub)} subclass element yet.`}</p>
+      <div class="d2-bld__act"><button type="button" class="rs-btn" data-push>${ico('push')}Save to in-game loadout</button><button type="button" class="rs-btn rs-btn--ghost" data-share>${ico('share')}Share build</button><button type="button" class="rs-btn rs-btn--ghost" data-mine>${ico('user')}${b.real ? 'Refresh my rolls' : 'Use my real gear stats'}</button><button type="button" class="d2-link" data-copyab>Copy to Build ${S.cur === 'A' ? 'B' : 'A'}</button><button type="button" class="d2-link" data-clear>${ico('trash')}Clear build</button></div></aside></div></div>`;
+    const ui = APP;
+    ui.onchange = (e) => {
+      const n = e.target.name;
+      if (n === 'bcls') { b.c = e.target.value; Object.keys(b.a).forEach((s) => { const x = D.AH[b.a[s]]; if (x && x.cl !== 'any' && x.cl !== b.c) b.a[s] = null; }); b.real = null; }
+      else if (n === 'bsub') b.sub = e.target.value;
+      else if (n === 'bname') b.name = e.target.value.slice(0, 40);
+      else if (n && n.indexOf('ap-') === 0) { const p = n.split('-'); b.ap[p[2]] = b.ap[p[2]] || {}; b.ap[p[2]][p[1]] = p[1] === 'g' ? +e.target.value : (p[1] === 'at' ? +e.target.value || null : e.target.value || null); b.real = null; }
+      else if (n && n.indexOf('wp-') === 0) { const p = n.split('-'); b.wp[p[1]] = b.wp[p[1]] || []; b.wp[p[1]][+p[2]] = +e.target.value || null; }
+      else return;
+      bSave(S); buildView();
+    };
+    ui.onclick = (e) => {
+      const t = e.target.closest('[data-btab]'); if (t) { S.cur = t.dataset.btab; bSave(S); return buildView(); }
+      const pk = e.target.closest('[data-pick]'); if (pk) return picker(pk.dataset.pick, b, S);
+      const rm = e.target.closest('[data-rm]'); if (rm) { const sl = rm.dataset.rm; if (b.w[sl] !== undefined) { b.w[sl] = null; b.wp[sl] = []; } else { b.a[sl] = null; b.ap[sl] = null; } b.real = null; bSave(S); return buildView(); }
+      const o = e.target.closest('[data-open]'); if (o) return openKey(o.dataset.open);
+      if (e.target.closest('[data-share]')) { const u = location.origin + location.pathname + '#b=' + enc({ c: b.c, sub: b.sub, name: b.name, w: b.w, wp: b.wp, a: b.a, ap: b.ap }); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast('Build link copied. Anyone with it sees this build.'), () => prompt('Copy this build link', u)); return; }
+      if (e.target.closest('[data-copyab]')) { const o2 = S.cur === 'A' ? 'B' : 'A'; S[o2] = JSON.parse(JSON.stringify(b)); bSave(S); toast('Copied to Build ' + o2); return buildView(); }
+      if (e.target.closest('[data-clear]')) { if (confirm('Clear Build ' + S.cur + '?')) { S[S.cur] = blank(b.c); bSave(S); buildView(); } return; }
+      if (e.target.closest('[data-mine]')) return useMine(b, S);
+      if (e.target.closest('[data-push]')) return pushLoadout(b);
+    };
+  }
+  function slotCard(b, sl, kind) {
+    const it = kind === 'w' ? D.WH[b.w[sl]] : D.AH[b.a[sl]];
+    if (!it) return `<div class="d2-slot is-empty"><span class="d2-slot__k">${ico(sl)}${esc(SLOTN[sl])}</span><button type="button" class="rs-btn rs-btn--ghost" data-pick="${kind}-${sl}">Choose ${esc(SLOTN[sl].toLowerCase())}</button></div>`;
+    let extra = '';
+    if (kind === 'w' && it.r !== 'exotic') {
+      const wp = b.wp[sl] || [];
+      extra = `<div class="d2-slot__opts">${it.pk.map((c, i) => c.length > 1 ? `<label class="d2-sel d2-sel--s"><span>${esc(colName(c, i))}</span><select name="wp-${sl}-${i}"><option value="">Any</option>${c.map((h) => `<option value="${h}"${wp[i] === h ? ' selected' : ''}>${esc(pn(h))}</option>`).join('')}</select></label>` : '').join('')}</div>`;
+    }
+    if (kind === 'w') { const ws = wStats(it, (b.wp[sl] || []).filter(Boolean)); extra += `<p class="d2-slot__st">${['Impact', 'Range', 'Stability', 'Handling', 'Reload Speed'].filter((k) => ws[k] != null).map((k) => `<span>${esc(k.replace(' Speed', ''))} <b>${ws[k]}</b></span>`).join('')}</p>`; }
+    if (kind === 'a') {
+      const ap = b.ap[sl] || {};
+      const real = b.real && b.real[sl];
+      if (real) extra = `<p class="d2-slot__st">${AST.filter((s) => real[s]).map((s) => `<span>${esc(s)} <b>${real[s]}</b></span>`).join('')} <small>Your roll</small></p>`;
+      else if (it.ro) {
+        const arch = perk(ap.at);
+        extra = `<div class="d2-slot__opts"><label class="d2-sel d2-sel--s"><span>Archetype</span><select name="ap-at-${sl}">${(it.at || []).map((h) => `<option value="${h}"${ap.at === h ? ' selected' : ''}>${esc(pn(h))}${perk(h).pr ? ` (${esc(perk(h).pr)}/${esc(perk(h).se)})` : ''}</option>`).join('')}</select></label><label class="d2-sel d2-sel--s"><span>Tertiary</span><select name="ap-t-${sl}"><option value="">Pick</option>${AST.filter((s) => !arch || (s !== arch.pr && s !== arch.se)).map((s) => `<option${ap.t === s ? ' selected' : ''}>${s}</option>`).join('')}</select></label><label class="d2-sel d2-sel--s"><span>Gear tier</span><select name="ap-g-${sl}">${[5, 4, 3, 2, 1].map((g) => `<option value="${g}"${(ap.g || 5) === g ? ' selected' : ''}>Tier ${g}</option>`).join('')}</select></label></div>`;
+        const ps = pieceStats(it, ap).s; extra += `<p class="d2-slot__st">${AST.filter((s) => ps[s]).map((s) => `<span>${esc(s)} <b>${ps[s]}</b></span>`).join('')}</p>`;
+      } else extra = '<p class="d2-fine">Older armor: stats are set per drop. Use "Use my real gear stats" to load yours.</p>';
+    }
+    return `<div class="d2-slot${it.r === 'exotic' ? ' is-exotic' : ''}"><span class="d2-slot__k">${ico(sl)}${esc(SLOTN[sl])}</span><div class="d2-slot__it"><button type="button" class="d2-slot__img" data-open="${kind}${it.h}" aria-label="Details for ${esc(it.n)}">${img(it.ic, 56, '')}</button><div><b>${esc(it.n)}</b><small>${kind === 'w' ? `${esc(it.ty)} · ${esc(it.el)} · ${esc(it.frn)}` : (it.ex ? esc(pn(it.ex)) : it.set && D.sets[it.set] ? esc(D.sets[it.set].n) + ' set' : esc(it.ty))}</small></div><button type="button" class="d2-link" data-pick="${kind}-${sl}">Change</button><button type="button" class="d2-iconbtn" data-rm="${sl}" aria-label="Remove ${esc(it.n)}">${ico('close')}</button></div>${extra}</div>`;
+  }
+  function picker(key, b, S) {
+    const kind = key[0], sl = key.slice(2);
+    const pool = kind === 'w' ? D.W.filter((w) => w.sl === sl && !w.ad) : D.A.filter((a) => a.sl === sl && (a.cl === b.c || a.cl === 'any') && (a.a3 || a.r === 'exotic'));
+    const d = sheet(`<h2 class="d2-sh__h">${ico(sl)}Choose ${esc(SLOTN[sl].toLowerCase())}${kind === 'a' ? ' for ' + esc(CLSN[b.c]) : ''}</h2><div class="d2-f d2-f--pick"><label class="d2-q"><span class="rs-sr">Search</span>${ico('filter')}<input type="search" data-pq placeholder="Search name, ${kind === 'w' ? 'type, frame or perk' : 'exotic perk or set'}" autocomplete="off"></label>${chips('pr', [['all', 'All'], ['legendary', 'Legendary'], ['exotic', 'Exotic']], 'all', 'Rarity')}</div><div class="d2-grid d2-grid--s" data-pl></div>`, 'wide');
+    let r = 'all';
+    const draw = () => { const qq = ($('[data-pq]', d).value || '').trim().toLowerCase(); const L = pool.filter((x) => (r === 'all' || x.r === r) && (!qq || qq.split(/\s+/).every((t) => x.txt.indexOf(t) > -1))).sort((x, y) => rel(y.rel) - rel(x.rel) || x.n.localeCompare(y.n)).slice(0, 90); $('[data-pl]', d).innerHTML = L.map((x) => tile(x, kind).replace('data-open=', 'data-choose=')).join('') || '<p class="d2-empty">Nothing matches.</p>'; };
+    draw();
+    $('[data-pq]', d).addEventListener('input', debounce(draw, 100));
+    d.addEventListener('change', (e) => { if (e.target.name === 'pr') { r = e.target.value; draw(); } });
+    d.addEventListener('click', (e) => { const c = e.target.closest('[data-choose]'); if (!c) return; addToBuild(c.dataset.choose); });
+    setTimeout(() => $('[data-pq]', d).focus(), 30);
+  }
+  function buildCompare(S) {
+    const cols = ['A', 'B'].map((k) => ({ k, b: S[k], T: buildTotals(S[k]) }));
+    const row = (label, f) => `<div class="d2-cmp__row"><span class="d2-cmp__k">${label}</span>${cols.map((c) => `<span>${f(c)}</span>`).join('')}</div>`;
+    const statRow = (s) => { const a = cols[0].T.t[s], bb = cols[1].T.t[s]; return `<div class="d2-cmp__row"><span class="d2-cmp__k">${esc(s)}</span>${cols.map((c, i) => { const v = c.T.t[s], o = i ? a : bb; return `<span class="${v > o ? 'is-best' : ''}"><span class="d2-bar d2-bar--200"><i style="width:${Math.min(100, v / 2)}%"></i></span><b>${v}</b>${v !== o ? `<em class="${v > o ? 'up' : 'dn'}">${v > o ? '+' : ''}${v - o}</em>` : ''}</span>`; }).join('')}</div>`; };
+    APP.innerHTML = `${hubNav()}<div class="d2-bld"><div class="d2-bld__tabs" role="tablist" aria-label="Builds">${['A', 'B'].map((k) => `<button type="button" role="tab" aria-selected="false" data-btab="${k}">Build ${k}<small>${esc(S[k].name || CLSN[S[k].c])}</small></button>`).join('')}<button type="button" role="tab" aria-selected="true" data-btab="CMP">${ico('compare')}Compare A vs B</button></div>
+      <div class="d2-cmp" style="--n:2"><div class="d2-cmp__row d2-cmp__hd"><span></span>${cols.map((c) => `<span><b>Build ${c.k}</b><small>${esc(c.b.name || '')} ${esc(CLSN[c.b.c])} · ${esc(c.b.sub)}</small></span>`).join('')}</div>
+      ${AST.map(statRow).join('')}
+      ${row('Total', (c) => `<b>${AST.reduce((t, s) => t + c.T.t[s], 0)}</b>`)}
+      ${SLOTW.concat(SLOTA).map((sl) => row(esc(SLOTN[sl]), (c) => { const it = SLOTW.indexOf(sl) > -1 ? D.WH[c.b.w[sl]] : D.AH[c.b.a[sl]]; return it ? `<button type="button" class="d2-link" data-open="${SLOTW.indexOf(sl) > -1 ? 'w' : 'a'}${it.h}">${img(it.ic, 28, '')}${esc(it.n)}</button>` : '—'; })).join('')}
+      ${row('Set bonuses', (c) => c.T.bonuses.filter((x) => x.on).map((x) => `<small>${esc(x.set)} ${x.n}pc: ${esc(x.name)}</small>`).join('<br>') || '—')}
+      ${row('Warnings', (c) => c.T.warn.map((w) => `<small>${esc(w)}</small>`).join('<br>') || '—')}</div></div>`;
+    APP.onclick = (e) => { const t = e.target.closest('[data-btab]'); if (t) { S.cur = t.dataset.btab; bSave(S); return buildView(); } const o = e.target.closest('[data-open]'); if (o) openKey(o.dataset.open); };
+    APP.onchange = null;
+  }
+
+  /* ---------- Bungie session (shared with the vault manager) ---------- */
+  const SK = 'rs_vault_s', REM = 'rs_vault_remember';
+  function vstore() { try { return localStorage.getItem(REM) === '1' ? localStorage : sessionStorage; } catch (e) { return null; } }
+  function vget() { const s = vstore(); try { const o = JSON.parse((s && s.getItem(SK)) || 'null'); if (!o) return null; if (Date.now() - o.t > 3600000 && localStorage.getItem(REM) !== '1') return null; return o.s; } catch (e) { return null; } }
+  function vset(v) { const s = vstore(); try { if (s) s.setItem(SK, JSON.stringify({ s: v, t: Date.now() })); } catch (e) { /* ignore */ } }
+  function vcall(path, opt) {
+    const s = vget();
+    if (!s) return Promise.reject({ signin: 1 });
+    opt = opt || {}; opt.headers = Object.assign({}, opt.headers || {}, { authorization: 'RS ' + s });
+    return fetch(API + path, opt).then((r) => {
+      const ns = r.headers.get('x-rs-session'); vset(ns || s);
+      if (r.status === 401) { try { sessionStorage.removeItem(SK); localStorage.removeItem(SK); } catch (e) { /* ignore */ } throw { signin: 1 }; }
+      return r.json().then((b) => { if (!r.ok) throw b; return b; });
+    });
+  }
+  function signIn(why) {
+    sheet(`<h2 class="d2-sh__h">${ico('user')}Sign in with Bungie</h2><p>${esc(why)}</p><ul class="d2-safe"><li>You sign in on Bungie.net. RankSurge never sees your password.</li><li>Your session stays in this browser only.</li><li>RankSurge can only move, equip and save loadouts. It cannot delete or dismantle anything.</li></ul><p><a class="rs-btn" href="${esc(API)}/auth/login?next=vault" data-signin rel="nofollow">Sign in with Bungie</a></p><p class="d2-fine">After signing in you come back to this build automatically.</p>`);
+    const a = $('[data-signin]'); if (a) a.addEventListener('click', () => { try { sessionStorage.setItem('rs_d2_back', location.pathname + location.search); } catch (e) { /* ignore */ } });
+  }
+  let PROF = null;
+  function profile() {
+    return vcall('/v2/vault/profile').then((p) => {
+      if (!p || p.ErrorCode !== 1) throw { message: (p && p.Message) || 'Bungie could not load your Guardians.' };
+      const R2 = p.Response;
+      const chars = Object.entries((R2.characters && R2.characters.data) || {}).map((e) => ({ id: e[0], ct: e[1].classType, cls: ['titan', 'hunter', 'warlock'][e[1].classType], light: e[1].light, last: e[1].dateLastPlayed })).sort((a, b) => String(b.last).localeCompare(String(a.last)));
+      const stats = (R2.itemComponents && R2.itemComponents.stats && R2.itemComponents.stats.data) || {};
+      const items = [];
+      const add = (it, loc, eq) => { if (!it.itemInstanceId) return; items.push({ id: it.itemInstanceId, h: it.itemHash, loc, eq: !!eq, st: stats[it.itemInstanceId] ? stats[it.itemInstanceId].stats : null }); };
+      ((R2.profileInventory && R2.profileInventory.data && R2.profileInventory.data.items) || []).forEach((it) => { if (it.bucketHash === 138197802) add(it, 'vault'); });
+      const ci = (R2.characterInventories && R2.characterInventories.data) || {}, ce = (R2.characterEquipment && R2.characterEquipment.data) || {};
+      Object.keys(ci).forEach((c) => (ci[c].items || []).forEach((it) => add(it, c, false)));
+      Object.keys(ce).forEach((c) => (ce[c].items || []).forEach((it) => add(it, c, true)));
+      const los = {}; const cl = (R2.characterLoadouts && R2.characterLoadouts.data) || {}; Object.keys(cl).forEach((c) => { los[c] = (cl[c].loadouts || []).map((l, i) => ({ i, empty: !(l.items || []).some((x) => x.itemInstanceId && x.itemInstanceId !== '0'), color: l.colorHash, icon: l.iconHash, name: l.nameHash })); });
+      PROF = { chars, items, los, hasStats: Object.keys(stats).length > 0 };
+      return PROF;
+    });
+  }
+  function owned(hash, ch) { const it = D.WH[hash] || D.AH[hash], hs = [hash].concat((it && it.alt) || []); const L = PROF.items.filter((i) => hs.indexOf(i.h) > -1); return L.find((i) => i.loc === ch && i.eq) || L.find((i) => i.loc === ch) || L.find((i) => i.loc === 'vault') || L[0] || null; }
+  function useMine(b, S) {
+    if (!vget()) return signIn('Sign in to load the real stat rolls of the armor you own for this build.');
+    toast('Loading your gear from Bungie…');
+    profile().then((p) => {
+      const ch = p.chars.find((c) => c.cls === b.c);
+      if (!p.hasStats) { toast('Real armor stats need the latest RankSurge server update. Using estimates for now.', 1); return; }
+      const real = {}; let n = 0;
+      SLOTA.forEach((sl) => { const a = D.AH[b.a[sl]]; if (!a) return; const it = owned(a.h, ch && ch.id); if (!it || !it.st) return; const s = {}; AST.forEach((k) => { const x = it.st[AST_ID[k]]; s[k] = x ? x.value : 0; }); real[sl] = s; n++; });
+      if (!n) { toast('You do not own any of these armor pieces yet, so the build keeps its estimates.', 1); return; }
+      b.real = real; bSave(S); buildView(); toast(`Loaded your real rolls for ${n} armor piece${n > 1 ? 's' : ''}.`);
+    }).catch((e) => { if (e && e.signin) return signIn('Your Bungie session ended. Sign in again to load your gear.'); toast((e && e.message) || 'Could not load your gear.', 1); });
+  }
+  function act(body) { return vcall('/v2/vault/action', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then((r) => { if (!r.ok) throw { message: r.message || 'Bungie could not do that.' }; return r; }); }
+  function pushLoadout(b) {
+    const T = buildTotals(b);
+    if (T.warn.length) { toast(T.warn[0], 1); return; }
+    const keys = SLOTW.map((s) => ['w', s, b.w[s]]).concat(SLOTA.map((s) => ['a', s, b.a[s]])).filter((x) => x[2]);
+    if (!keys.length) { toast('Add some gear to the build first.', 1); return; }
+    if (!vget()) return signIn('Sign in with Bungie to save this build into one of your in-game loadout slots.');
+    const d = sheet(`<h2 class="d2-sh__h">${ico('push')}Save to in-game loadout</h2><p class="d2-load">Checking your Guardians and gear&hellip;</p>`);
+    profile().then((p) => {
+      const chars = p.chars.filter((c) => c.cls === b.c);
+      if (!chars.length) { d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><h2 class="d2-sh__h">No ${esc(CLSN[b.c])} found</h2><p>This build is for a ${esc(CLSN[b.c])}, but your account has no ${esc(CLSN[b.c])} character.</p>`; return; }
+      const ch = chars[0];
+      const rows = keys.map((k) => { const it = k[0] === 'w' ? D.WH[k[2]] : D.AH[k[2]]; const o = owned(+k[2], ch.id); return { k, it, o }; });
+      const miss = rows.filter((r) => !r.o);
+      const slots = (p.los[ch.id] || []);
+      d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><h2 class="d2-sh__h">${ico('push')}Save to your ${esc(CLSN[b.c])}'s loadout</h2>
+        <ul class="d2-own">${rows.map((r) => `<li class="${r.o ? 'is-ok' : 'is-miss'}">${img(r.it.ic, 32, '')}<b>${esc(r.it.n)}</b><small>${r.o ? (r.o.loc === ch.id ? (r.o.eq ? 'Equipped' : 'On this character') : r.o.loc === 'vault' ? 'In your vault' : 'On another character') : 'Not owned'}</small></li>`).join('')}</ul>
+        ${miss.length ? `<p class="d2-warn">You don't own ${miss.length} of these items, so they are left out. Destiny 2 only saves loadouts from gear you have.</p>` : ''}
+        ${slots.length ? `<label class="d2-sel"><span>Loadout slot</span><select data-slot>${slots.map((s) => `<option value="${s.i}">Slot ${s.i + 1}${s.empty ? ' (empty)' : ' (will be replaced)'}</option>`).join('')}</select></label>` : '<p class="d2-warn">Bungie did not return your loadout slots. Open Destiny 2 once and try again.</p>'}
+        <p class="d2-fine">RankSurge moves each item to your ${esc(CLSN[b.c])}, equips it, then saves what is equipped into the slot. Your Guardian must be in orbit or a social space, and the character's inventory needs free space for each item.</p>
+        <p><button type="button" class="rs-btn" data-go${slots.length && rows.length > miss.length ? '' : ' disabled'}>Move, equip and save</button></p><ol class="d2-steps" data-steps aria-live="polite"></ol>`;
+      const go = $('[data-go]', d); if (!go) return;
+      go.onclick = async () => {
+        const ix = +$('[data-slot]', d).value;
+        const sl = slots.find((s) => s.i === ix);
+        if (sl && !sl.empty && !confirm(`Replace loadout slot ${ix + 1} on your ${CLSN[b.c]}?`)) return;
+        go.disabled = true;
+        const log = $('[data-steps]', d);
+        const step = (t, bad) => { const li = document.createElement('li'); li.textContent = t; if (bad) li.className = 'is-bad'; log.appendChild(li); return li; };
+        try {
+          for (const r of rows.filter((x) => x.o)) {
+            const o = r.o;
+            if (o.loc !== ch.id) {
+              if (o.eq) throw { message: `${r.it.n} is equipped on another character. Unequip it there first.` };
+              if (o.loc !== 'vault') { step(`Moving ${r.it.n} to the vault`); await act({ op: 'transfer', itemId: o.id, itemHash: o.h, characterId: o.loc, toVault: true }); o.loc = 'vault'; }
+              step(`Moving ${r.it.n} to your ${CLSN[b.c]}`); await act({ op: 'transfer', itemId: o.id, itemHash: o.h, characterId: ch.id, toVault: false }); o.loc = ch.id;
+            }
+            if (!o.eq) { step(`Equipping ${r.it.n}`); await act({ op: 'equip', itemId: o.id, characterId: ch.id }); o.eq = true; }
+          }
+          step(`Saving to loadout slot ${ix + 1}`);
+          const body = { op: 'loadout_save', characterId: ch.id, index: ix };
+          if (sl) { if (sl.color) body.colorHash = sl.color; if (sl.icon) body.iconHash = sl.icon; if (sl.name) body.nameHash = sl.name; }
+          await act(body);
+          step('Done. Open Destiny 2 to see it in your loadouts.');
+          toast('Saved to loadout slot ' + (ix + 1));
+        } catch (e) {
+          if (e && e.signin) { signIn('Your Bungie session ended. Sign in again, then try once more.'); return; }
+          step((e && e.message) || 'Bungie stopped the change. Make sure your Guardian is in orbit or a social space.', 1);
+          go.disabled = false;
+        }
+      };
+    }).catch((e) => { if (e && e.signin) return signIn('Your Bungie session ended. Sign in again to save loadouts.'); d.innerHTML = `<button type="button" class="d2-sh__x" data-sh-close aria-label="Close">${ico('close')}</button><p class="d2-warn">${esc((e && e.message) || 'Could not reach Bungie. Try again.')}</p>`; });
+  }
+
+  /* ---------- boot ---------- */
+  APP.innerHTML = '<p class="d2-load">Loading the Destiny 2 database&hellip;</p>';
+  load().then((data) => {
+    D = data; index();
+    R.classList.add('is-ready');
+    const st = $('[data-d2-asof]', R); if (st && D.meta.built) st.textContent = 'Data from Bungie, updated ' + new Date(D.meta.built).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) + '.';
+    if (MODE === 'armor') armorView(); else if (MODE === 'build') buildView(); else if (MODE === 'top') topView(); else weaponsView();
+    tray();
+    const h = location.hash.match(/^#([wa])(\d+)$/); if (h) openKey(h[1] + h[2]);
+    live('Database loaded: ' + D.W.length + ' weapons and ' + D.A.length + ' armor pieces.');
+  }).catch((e) => { APP.innerHTML = `<p class="d2-warn">${esc(e.message || 'The database could not load.')}</p><p><button type="button" class="rs-btn" onclick="location.reload()">Try again</button></p>`; });
+})();
