@@ -82,12 +82,13 @@
     let meta = null;
     try { const r = await fetch(CDN + 'meta.json', { cache: 'no-cache' }); if (r.ok) meta = await r.json(); } catch (e) { meta = null; }
     if (meta && meta.v) {
-      const hit = await iget(db, 'v:' + meta.v);
+      const vk = meta.v + (meta.built ? '|' + meta.built : '');
+      const hit = await iget(db, 'v:' + vk);
       if (hit) { hit.meta = meta; hit.curated = await curated(); return hit; }
       APP.innerHTML = '<p class="d2-load">Downloading the Destiny 2 item database&hellip;</p>';
       const parts = await Promise.all(['weapons', 'armor', 'perks', 'sets', 'groups'].map((k) => fetch(CDN + k + '.json').then((r) => { if (!r.ok) throw new Error(k); return r.json(); })));
       const data = { meta, weapons: parts[0], armor: parts[1], perks: parts[2], sets: parts[3], groups: parts[4] };
-      await iput(db, 'v:' + meta.v, data);
+      await iput(db, 'v:' + vk, data);
       data.curated = await curated();
       return data;
     }
