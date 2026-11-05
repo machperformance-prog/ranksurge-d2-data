@@ -866,7 +866,7 @@
   }
   function pickWeapons(L, A, excl, used) {
     used = used || {};
-    const top = {}; SLOTW.forEach((sl) => { top[sl] = L.filter((c) => c.it.sl === sl && !(c.it.r === 'exotic' && excl[c.it.h])).map((c) => ({ c, sc: wScore(c.it, A) - (used[c.it.h] || 0) * 14 })).sort((a, b) => b.sc - a.sc).slice(0, 6); });
+    const top = {}; SLOTW.forEach((sl) => { const all = L.filter((c) => c.it.sl === sl && !(c.it.r === 'exotic' && excl[c.it.h])).map((c) => ({ c, sc: wScore(c.it, A) - (used[c.it.h] || 0) * 14 })).sort((a, b) => b.sc - a.sc); top[sl] = all.filter((x) => x.c.it.r !== 'exotic').slice(0, 5).concat(all.filter((x) => x.c.it.r === 'exotic').slice(0, 3)); });
     let best = null;
     const K = top.kinetic.length ? top.kinetic : [null], E = top.energy.length ? top.energy : [null], P = top.power.length ? top.power : [null];
     K.forEach((k) => E.forEach((e) => P.forEach((pw) => {
