@@ -76,18 +76,19 @@
   function idb() { return new Promise((res) => { try { const r = indexedDB.open('rsd2db', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } }); }
   function iget(db, k) { return new Promise((res) => { if (!db) return res(null); try { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch (e) { res(null); } }); }
   function iput(db, k, v) { return new Promise((res) => { if (!db) return res(); try { const tx = db.transaction('kv', 'readwrite'); const s = tx.objectStore('kv'); s.clear(); s.put(v, k); s.put(k.slice(2), 'last'); tx.oncomplete = res; tx.onerror = res; } catch (e) { res(); } }); }
+  async function curated() { try { const c = await fetch(CDN + 'curated.json', { cache: 'no-cache' }); if (c.ok) return await c.json(); } catch (e) { /* optional */ } return null; }
   async function load() {
     const db = await idb();
     let meta = null;
     try { const r = await fetch(CDN + 'meta.json', { cache: 'no-cache' }); if (r.ok) meta = await r.json(); } catch (e) { meta = null; }
     if (meta && meta.v) {
       const hit = await iget(db, 'v:' + meta.v);
-      if (hit) return hit;
+      if (hit) { hit.meta = meta; hit.curated = await curated(); return hit; }
       APP.innerHTML = '<p class="d2-load">Downloading the Destiny 2 item database&hellip;</p>';
       const parts = await Promise.all(['weapons', 'armor', 'perks', 'sets', 'groups'].map((k) => fetch(CDN + k + '.json').then((r) => { if (!r.ok) throw new Error(k); return r.json(); })));
       const data = { meta, weapons: parts[0], armor: parts[1], perks: parts[2], sets: parts[3], groups: parts[4] };
-      try { const c = await fetch(CDN + 'curated.json', { cache: 'no-cache' }); if (c.ok) data.curated = await c.json(); } catch (e) { /* optional */ }
       await iput(db, 'v:' + meta.v, data);
+      data.curated = await curated();
       return data;
     }
     const last = await iget(db, 'last');
