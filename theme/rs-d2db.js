@@ -1026,7 +1026,7 @@
   /* ---------- boot ---------- */
   APP.innerHTML = '<p class="d2-load">Loading the Destiny 2 database&hellip;</p>';
   load().then((data) => {
-    D = data; index();
+    D = data; index(); try { if (localStorage.getItem('rs_d2_dbg') === '1') window.__rsd2 = { D, prof: () => PROF, myWeapons, myArmor, agentBuild, ACTS }; } catch (e) { /* debug hook off */ }
     R.classList.add('is-ready');
     const st = $('[data-d2-asof]', R); if (st && D.meta.built) st.textContent = 'Data from Bungie, updated ' + new Date(D.meta.built).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) + '.';
     if (MODE === 'armor') armorView(); else if (MODE === 'build') buildView(); else if (MODE === 'top') topView(); else weaponsView();
