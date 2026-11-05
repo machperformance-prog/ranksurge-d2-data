@@ -328,3 +328,4 @@ button.d2-chip{display:inline-flex;align-items:center;gap:6px;min-height:44px;pa
 button.d2-chip small{color:var(--mu);font-size:13px}
 button.d2-chip.is-on{border-color:var(--rs-cyan,#00E5FF);background:rgba(0,229,255,.12);color:#fff}
 button.d2-chip:focus-visible{outline:2px solid var(--rs-cyan,#00E5FF);outline-offset:2px}
+.d2-ts{margin-top:8px;min-height:65px}

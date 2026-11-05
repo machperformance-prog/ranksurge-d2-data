@@ -896,7 +896,17 @@
     return out;
   }
   const aiTxt = (v) => String(v || '').replace(/[^A-Za-z0-9 .%\/+-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 32) || '-';
-  function agentAI(opts, A, ch) {
+  let tsP = null;
+  function tsLoad() {
+    if (window.turnstile) return Promise.resolve(window.turnstile);
+    if (tsP) return tsP;
+    tsP = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; sc.async = true; sc.onload = () => { let n = 0; (function w() { if (window.turnstile) return res(window.turnstile); if (++n > 50) return rej(); setTimeout(w, 100); })(); }; sc.onerror = () => { tsP = null; rej(); }; document.head.appendChild(sc); });
+    return tsP;
+  }
+  function tsToken(host, key) {
+    return tsLoad().then((ts) => new Promise((res) => { let done = false, wid = null; const el = document.createElement('div'); el.className = 'd2-ts'; host.appendChild(el); const fin = (t) => { if (done) return; done = true; try { if (wid != null) ts.remove(wid); } catch (e) { /* ignore */ } el.remove(); res(t || ''); }; try { wid = ts.render(el, { sitekey: key, theme: 'dark', callback: fin, 'error-callback': () => fin(''), 'expired-callback': () => fin('') }); } catch (e) { fin(''); } setTimeout(() => fin(''), 120000); })).catch(() => '');
+  }
+  function agentAI(opts, A, ch, tok) {
     const host = document.querySelector('[data-ts]'), pass = (document.querySelector('[data-pass]') || {}).dataset;
     const stats = { activity: aiTxt(A.n), class: aiTxt(CLSN[ch.cls]) };
     opts.forEach((o, i) => {
@@ -908,7 +918,8 @@
     });
     const q = `Which loadout, A, B or C, is best for ${A.n} on my ${CLSN[ch.cls]}? Start your answer with only the letter, then explain why in 2 or 3 short sentences using the weapons, exotic armor and stats given.`.slice(0, 300);
     const body = { game: 'destiny-2', stats, question: q }; if (pass && pass.pass) body.pass = pass.pass;
-    return fetch(API + '/v1/ask', { method: 'POST', credentials: 'omit', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json().then((j) => ({ ok: r.ok, j, s: r.status }))).catch(() => ({ ok: false, j: {} }));
+    const hdr = { 'content-type': 'application/json' }; if (tok) hdr['x-rs-turnstile'] = tok;
+    return fetch(API + '/v1/ask', { method: 'POST', credentials: 'omit', headers: hdr, body: JSON.stringify(body) }).then((r) => r.json().then((j) => ({ ok: r.ok, j, s: r.status }))).catch(() => ({ ok: false, j: {} }));
   }
   function agent(S) {
     if (!vget()) return signIn('Sign in with Bungie so the RankSurge AI agent can look through your vault and characters and build loadouts from the gear you own. Nothing moves until you tap Equip.');
@@ -937,9 +948,15 @@
         if (!opts.length) { out.innerHTML = `<p class="d2-warn">RankSurge could not find gear for your ${esc(CLSN[ch.cls])}. Make sure Bungie shows it in your vault or on the character.</p>`; return; }
         out.innerHTML = `<div class="d2-ag__ai" data-ai><p class="d2-load">The AI coach is comparing the three loadouts for ${esc(A.n)}&hellip;</p></div><ol class="d2-ag__list">${opts.map(card).join('')}</ol>`;
         const seq = (draw.n = (draw.n || 0) + 1);
-        agentAI(opts, A, ch).then((r) => {
+        const ask = (tok) => agentAI(opts, A, ch, tok).then((r) => {
           if (seq !== draw.n) return;
           const box = $('[data-ai]', d); if (!box) return;
+          const key = (document.querySelector('[data-ts]') || { dataset: {} }).dataset.ts;
+          if (!tok && key && r.s === 403 && r.j && (r.j.error === 'challenge_required' || r.j.error === 'verify_failed')) {
+            box.innerHTML = '<p class="d2-fine">Quick human check, then the AI coach compares your loadouts:</p>';
+            tsToken(box, key).then((t) => { if (seq !== draw.n) return; if (t) { box.innerHTML = '<p class="d2-load">The AI coach is comparing the three loadouts&hellip;</p>'; ask(t); } else box.innerHTML = `<p class="d2-fine">The check did not finish. Loadout A is RankSurge's top pick for ${esc(A.n)}.</p>`; });
+            return;
+          }
           if (r.ok && r.j.answer) {
             const m = /^\W*(?:option\s+|loadout\s+)?([ABC])\b/i.exec(r.j.answer); aiPick = m ? 'ABC'.indexOf(m[1].toUpperCase()) : -1;
             if (aiPick >= opts.length) aiPick = -1;
@@ -949,6 +966,7 @@
             box.innerHTML = `<p class="d2-fine">${esc((r.j && r.j.message) || 'The AI coach is busy right now.')} Loadout A is RankSurge's top pick for ${esc(A.n)}.</p>`;
           }
         });
+        ask('');
       };
       const load = (o, equip) => {
         const b = S[S.cur]; b.c = ch.cls; b.inst = b.inst || {}; b.real = {}; b.fill = {};
