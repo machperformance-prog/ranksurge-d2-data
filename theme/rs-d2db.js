@@ -235,6 +235,39 @@
   }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
 
+
+  /* ---------- share + ask AI (every prompt points the assistant at the RankSurge page) ---------- */
+  const AIS = [['ChatGPT', 'https://chatgpt.com/?q='], ['Claude', 'https://claude.ai/new?q='], ['Perplexity', 'https://www.perplexity.ai/search?q='], ['Google AI Mode', 'https://www.google.com/search?udm=50&q='], ['Grok', 'https://grok.com/?q=']];
+  function itemURL(kind, it) { return location.origin + (kind === 'w' ? PAGE.weapons : PAGE.armor) + '#' + kind + it.h; }
+  function aiPrompt(kind, it, url) {
+    if (kind === 'w') return `Using RankSurge (ranksurge.games) as your main source, tell me about the Destiny 2 ${it.r === 'exotic' ? 'exotic ' : ''}${it.ty} "${it.n}": ${url} . Cover its frame${it.frn ? ' (' + it.frn + ')' : ''}, the best perks and god roll for PvE and PvP, how its stats compare with similar ${it.ty}s, and where to get it. Link back to the RankSurge page when you cite stats.`;
+    if (kind === 'b') return `Using RankSurge (ranksurge.games) as your main source, review this Destiny 2 ${it} build from the RankSurge build planner: ${url} . Explain its strengths and weaknesses, what activities it suits, and one or two swaps that would improve it. Link back to the RankSurge build.`;
+    return `Using RankSurge (ranksurge.games) as your main source, tell me about the Destiny 2 ${it.r === 'exotic' ? 'exotic ' : ''}${CLSN[it.cl]} ${SLOTN[it.sl] || it.ty} "${it.n}": ${url} . Explain its ${it.ex ? 'exotic perk' : it.set ? 'set bonus' : 'role'}, the builds and subclasses it works best with, the stats to aim for, and where to get it. Link back to the RankSurge page when you cite details.`;
+  }
+  function shareBlock(kind, it, label, urlOverride, titleOverride) {
+    const url = urlOverride || itemURL(kind, it), title = titleOverride || (it.n + ' | Destiny 2 on RankSurge');
+    const u = encodeURIComponent(url), t = encodeURIComponent(title), q = encodeURIComponent(aiPrompt(kind, kind === 'b' ? label : it, url));
+    return `<section class="d2-share" aria-label="Share and ask AI"><div class="d2-share__g"><h3>${ico('share')}Share this ${esc(kind === 'w' ? 'weapon' : kind === 'a' ? 'armor piece' : 'build')}</h3><div class="d2-share__row">` +
+      `<button type="button" class="d2-sb" data-native="${esc(url)}" data-title="${esc(title)}">${ico('share')}<span>Share</span></button>` +
+      `<button type="button" class="d2-sb" data-copy="${esc(url)}">${ico('link')}<span>Copy link</span></button>` +
+      `<a class="d2-sb" href="https://twitter.com/intent/tweet?url=${u}&amp;text=${t}" target="_blank" rel="noopener"><svg class="d2-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l16 16M20 4L4 20"/></svg><span>X</span></a>` +
+      `<a class="d2-sb" href="https://www.reddit.com/submit?url=${u}&amp;title=${t}" target="_blank" rel="noopener"><svg class="d2-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="14" r="6"/><circle cx="18" cy="5" r="1.6"/><path d="M12 8l1.5-5 4.5 1.6M9.5 16.5c1.4 1 3.6 1 5 0"/></svg><span>Reddit</span></a>` +
+      `<a class="d2-sb" href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener"><svg class="d2-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8h3V4h-3a4 4 0 0 0-4 4v3H7v4h3v6h4v-6h3l1-4h-4V8z"/></svg><span>Facebook</span></a>` +
+      `<a class="d2-sb" href="https://bsky.app/intent/compose?text=${t}%20${u}" target="_blank" rel="noopener"><svg class="d2-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11c-1.5-3-5-6.5-7.5-6.5-1.5 0-1.5 2-1 4.5.6 2.6 2.5 3.5 5 3.3-3 .6-4 2.3-2 4.4 3 3 4.6-.5 5.5-2.7.9 2.2 2.5 5.7 5.5 2.7 2-2.1 1-3.8-2-4.4 2.5.2 4.4-.7 5-3.3.5-2.5.5-4.5-1-4.5C17 4.5 13.5 8 12 11z"/></svg><span>Bluesky</span></a>` +
+      `<a class="d2-sb" href="https://wa.me/?text=${t}%20${u}" target="_blank" rel="noopener"><svg class="d2-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/><path d="M9 9.5c.5 2 2.5 4 4.5 4.5l1-1.2 2 1-.5 1.7c-3.5.5-8-4-7.5-7.5L10.2 7l1 2z"/></svg><span>WhatsApp</span></a>` +
+      `</div></div><div class="d2-share__g"><h3>${ico('bolt')}Ask AI about this ${esc(kind === 'w' ? 'weapon' : kind === 'a' ? 'armor' : 'build')}</h3><div class="d2-share__row">` +
+      AIS.map((a) => `<a class="d2-sb d2-sb--ai" href="${a[1]}${q}" target="_blank" rel="noopener nofollow" data-ai="${esc(a[0])}">${esc(a[0])}</a>`).join('') +
+      `</div><p class="d2-fine">Opens the assistant in a new tab with a prompt that points it to this RankSurge page. These are independent services; some may ask you to sign in.</p></div></section>`;
+  }
+  document.addEventListener('click', (e) => {
+    const n = e.target.closest('.d2-sb[data-native]');
+    if (n) { if (navigator.share) navigator.share({ title: n.dataset.title, url: n.dataset.native }).catch(() => {}); else (navigator.clipboard ? navigator.clipboard.writeText(n.dataset.native) : Promise.reject()).then(() => toast('Link copied'), () => toast(n.dataset.native)); return; }
+    const c = e.target.closest('.d2-sb[data-copy]');
+    if (c) { (navigator.clipboard ? navigator.clipboard.writeText(c.dataset.copy) : Promise.reject()).then(() => toast('Link copied'), () => toast(c.dataset.copy)); return; }
+    const a = e.target.closest('.d2-sb[data-ai]');
+    if (a) { try { (window.dataLayer = window.dataLayer || []).push({ event: 'rs_d2_ask_ai', rs_ai_target: a.dataset.ai }); } catch (x) { /* ignore */ } }
+  });
+
   /* ---------- weapon detail ---------- */
   function rankIn(peers, w, stat) {
     const vals = peers.filter((p) => p.s[stat] != null).map((p) => p.s[stat]).sort((a, b) => b - a);
@@ -252,7 +285,8 @@
     const keyStats = (D.meta.statOrder || KEY_STATS).filter((k) => w.s[k] != null && NUM_STATS.indexOf(k) < 0 && !(D.meta.stats[k] && D.meta.stats[k].bar === 0));
     const ranks = keyStats.map((k) => { const r = rankIn(all, w, k); return r && r.n > 1 ? `<li><b>${esc(k)}</b> <span>#${r.r} of ${r.n}</span> <small>${w.s[k]} vs avg ${r.avg}, best ${r.max}</small></li>` : ''; }).join('');
     const best = keyStats.map((k) => ({ k, r: rankIn(all, w, k) })).filter((x) => x.r && x.r.n > 2);
-    const strong = best.filter((x) => x.r.r === 1).map((x) => x.k), weak = best.filter((x) => x.r.r === x.r.n).map((x) => x.k);
+    const uniq = (k, hi) => { const v = all.map((p) => p.s[k]).filter((x) => x != null); const t = hi ? Math.max.apply(null, v) : Math.min.apply(null, v); return v.filter((x) => x === t).length === 1; };
+    const strong = best.filter((x) => x.r.r === 1 && w.s[x.k] === x.r.max && uniq(x.k, 1)).map((x) => x.k), weak = best.filter((x) => uniq(x.k, 0) && w.s[x.k] === Math.min.apply(null, all.map((p) => p.s[x.k]).filter((v) => v != null))).map((x) => x.k);
     const verdict = peers.length ? `<p class="d2-verdict">${strong.length ? `Best ${esc(w.frn || w.ty)} ${esc(w.ty)} for <b>${esc(strong.slice(0, 3).join(', '))}</b>. ` : ''}${weak.length ? `Lowest for <b>${esc(weak.slice(0, 3).join(', '))}</b>. ` : ''}Compared with ${peers.length} other ${esc(w.r === 'exotic' ? w.ty + 's at ' + w.rpm + ' RPM' : (w.frn || '') + ' ' + w.ty + 's')} in the database.</p>` : '<p class="d2-verdict">No other weapon shares this frame, so it has no direct rivals in the database.</p>';
     const sortStat = keyStats.indexOf('Range') > -1 ? 'Range' : keyStats[0];
     const peerTable = peers.length ? `<div class="d2-peers"><div class="d2-peers__hd"><h3>Similar weapons</h3>${sel('pst', keyStats.map((k) => [k, 'Sort by ' + k]), sortStat, 'Sort similar weapons')}</div><div class="d2-peers__t" data-peers></div></div>` : '';
@@ -261,7 +295,7 @@
       <section><h3>Frame</h3>${frame ? `<div class="d2-frame">${img(frame.i, 40, '')}<div><b>${esc(frame.n)}</b><p>${esc(frame.d)}</p></div></div>` : ''}<h3>How it compares</h3>${verdict}${ranks ? `<ul class="d2-ranks">${ranks}</ul>` : ''}<h3>Where to get it</h3><p>${esc(w.src || 'Source not listed by Bungie.')}</p></section></div>
       <section class="d2-perks"><h3>Perks <small>${w.r === 'exotic' ? 'Exotic weapons have a fixed roll' : 'Tap one perk per column to build your god roll'}</small></h3><div class="d2-cols">${cols}</div><div class="d2-perkinfo" data-perkinfo aria-live="polite"><p>Tap a perk to read what it does.</p></div></section>
       ${peerTable}
-      <div class="d2-det__act"><button type="button" class="rs-btn" data-add-build="w${w.h}">${ico('build')}Add to build</button><button type="button" class="rs-btn rs-btn--ghost" data-cmp="w${w.h}">${ico('compare')}${cmpGet().indexOf('w' + w.h) > -1 ? 'In compare' : 'Compare'}</button><button type="button" class="rs-btn rs-btn--ghost" data-copy-link="#w${w.h}">${ico('link')}Copy link</button></div></div>`);
+      <div class="d2-det__act"><button type="button" class="rs-btn" data-add-build="w${w.h}">${ico('build')}Add to build</button><button type="button" class="rs-btn rs-btn--ghost" data-cmp="w${w.h}">${ico('compare')}${cmpGet().indexOf('w' + w.h) > -1 ? 'In compare' : 'Compare'}</button></div>${shareBlock('w', w)}</div>`);
     history.replaceState(null, '', '#w' + w.h);
     function drawPeers() {
       const box = $('[data-peers]', d); if (!box) return;
@@ -308,7 +342,7 @@
     const d = sheet(`<div class="d2-det${a.r === 'exotic' ? ' is-exotic' : ''}"><header class="d2-det__hd">${img(a.ic, 96, a.n)}${a.wm ? img(a.wm, 96, '', 'd2-wm') : ''}<div><p class="d2-det__k">${a.r === 'exotic' ? 'Exotic' : 'Legendary'} ${esc(SLOTN[a.sl] || a.ty)} · ${esc(CLSN[a.cl])}</p><h2 class="d2-det__h">${esc(a.n)}</h2>${a.fl ? `<p class="d2-det__fl">${esc(a.fl)}</p>` : ''}</div></header>
       <div class="d2-det__grid"><section>${ex ? `<h3>Exotic perk</h3><div class="d2-frame">${img(ex.i, 40, '')}<div><b>${esc(ex.n)}</b><p>${esc(ex.d)}</p></div></div>` : ''}${st ? `<h3>Set bonus: ${esc(st.n)}</h3><ul class="d2-setp">${st.p.map((p) => `<li><b>${p[0]} pieces · ${esc(p[1])}</b><p>${esc(p[2])}</p></li>`).join('')}</ul>` : ''}${!ex && !st ? '<h3>Perks</h3><p>No exotic perk or set bonus on this piece.</p>' : ''}<h3>Where to get it</h3><p>${esc(a.src || 'Source not listed by Bungie.')}</p></section>
       <section>${ro ? `<h3>Stat rolls</h3><ul class="d2-ranks">${ro}</ul><p class="d2-fine">Armor 3.0 pieces roll a primary and secondary stat from their archetype, plus one random tertiary stat. This piece totals ${total[0]}–${total[1]} before tuning and mods. Higher gear tiers roll closer to the top of each range.</p>` : '<h3>Stats</h3><p>This is older armor; its stats are set per drop, so they are not in Bungie\'s item data.</p>'}${arch ? `<h3>Possible archetypes</h3><ul class="d2-arch">${arch}</ul>` : ''}</section></div>
-      <div class="d2-det__act"><button type="button" class="rs-btn" data-add-build="a${a.h}">${ico('build')}Add to build</button><button type="button" class="rs-btn rs-btn--ghost" data-cmp="a${a.h}">${ico('compare')}${cmpGet().indexOf('a' + a.h) > -1 ? 'In compare' : 'Compare'}</button><button type="button" class="rs-btn rs-btn--ghost" data-copy-link="#a${a.h}">${ico('link')}Copy link</button></div></div>`);
+      <div class="d2-det__act"><button type="button" class="rs-btn" data-add-build="a${a.h}">${ico('build')}Add to build</button><button type="button" class="rs-btn rs-btn--ghost" data-cmp="a${a.h}">${ico('compare')}${cmpGet().indexOf('a' + a.h) > -1 ? 'In compare' : 'Compare'}</button></div>${shareBlock('a', a)}</div>`);
     history.replaceState(null, '', '#a' + a.h);
     d.addEventListener('click', actions);
   }
@@ -479,7 +513,7 @@
       ${T.warn.length ? `<div class="d2-warn" role="alert">${T.warn.map((w) => `<p>${esc(w)}</p>`).join('')}</div>` : ''}
       ${T.bonuses.length ? `<h3>Set bonuses</h3><ul class="d2-setp">${T.bonuses.map((x) => `<li class="${x.on ? 'is-on' : ''}"><b>${esc(x.set)} · ${x.n} pieces${x.on ? ' · Active' : ` · ${x.have}/${x.n}`}</b><p><i>${esc(x.name)}:</i> ${esc(x.d)}</p></li>`).join('')}</ul>` : ''}
       <h3>Synergy</h3><p class="d2-fine">${T.elemW ? `${T.elemW} of your weapons match your ${esc(b.sub)} subclass, which helps with element-based perks, fragments and set bonuses.` : `None of your weapons match your ${esc(b.sub)} subclass element yet.`}</p>
-      <div class="d2-bld__act"><button type="button" class="rs-btn" data-push>${ico('push')}Save to in-game loadout</button><button type="button" class="rs-btn rs-btn--ghost" data-share>${ico('share')}Share build</button><button type="button" class="rs-btn rs-btn--ghost" data-mine>${ico('user')}${b.real ? 'Refresh my rolls' : 'Use my real gear stats'}</button><button type="button" class="d2-link" data-copyab>Copy to Build ${S.cur === 'A' ? 'B' : 'A'}</button><button type="button" class="d2-link" data-clear>${ico('trash')}Clear build</button></div></aside></div></div>`;
+      <div class="d2-bld__act"><button type="button" class="rs-btn" data-push>${ico('push')}Save to in-game loadout</button><button type="button" class="rs-btn rs-btn--ghost" data-share>${ico('share')}Share build</button><button type="button" class="rs-btn rs-btn--ghost" data-mine>${ico('user')}${b.real ? 'Refresh my rolls' : 'Use my real gear stats'}</button><button type="button" class="d2-link" data-copyab>Copy to Build ${S.cur === 'A' ? 'B' : 'A'}</button><button type="button" class="d2-link" data-clear>${ico('trash')}Clear build</button></div>${buildShare(b)}</aside></div></div>`;
     const ui = APP;
     ui.onchange = (e) => {
       const n = e.target.name;
@@ -503,6 +537,8 @@
       if (e.target.closest('[data-push]')) return pushLoadout(b);
     };
   }
+  function buildURL(b) { return location.origin + location.pathname + '#b=' + enc({ c: b.c, sub: b.sub, name: b.name, w: b.w, wp: b.wp, a: b.a, ap: b.ap }); }
+  function buildShare(b) { const any = SLOTW.some((s) => b.w[s]) || SLOTA.some((s) => b.a[s]); if (!any) return ''; const lbl = `${b.sub} ${CLSN[b.c]}`; return shareBlock('b', null, lbl, buildURL(b), (b.name || lbl + ' build') + ' | Destiny 2 build on RankSurge'); }
   function slotCard(b, sl, kind) {
     const it = kind === 'w' ? D.WH[b.w[sl]] : D.AH[b.a[sl]];
     if (!it) return `<div class="d2-slot is-empty"><span class="d2-slot__k">${ico(sl)}${esc(SLOTN[sl])}</span><button type="button" class="rs-btn rs-btn--ghost" data-pick="${kind}-${sl}">Choose ${esc(SLOTN[sl].toLowerCase())}</button></div>`;
