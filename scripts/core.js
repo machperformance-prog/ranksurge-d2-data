@@ -41,7 +41,8 @@
         if (t && !(desc && desc.includes(t)) && !extra.includes(t)) extra.push(t);
       }
       if (!desc && extra.length) desc = extra.shift();
-      return [desc, extra.join(' ')].filter(Boolean).join(' ');
+      const seen = new Set();
+      return [desc, extra.join(' ')].filter(Boolean).join(' ').split(/(?<=[.!?])\s+/).filter((x) => { const k = x.trim().toLowerCase(); if (!k || seen.has(k)) return false; seen.add(k); return true; }).join(' ');
     }
     function addPerk(h) {
       if (perks[h] !== undefined) return perks[h] ? h : 0;
@@ -178,10 +179,17 @@
         const cat = ini && ini.plug && ini.plug.plugCategoryIdentifier;
         if (d.inventory.tierType === 6 && !exotic && ini && cat === 'intrinsics' && ini.displayProperties.name) exotic = addPerk(e.singleInitialItemHash);
         if (e.randomizedPlugSetHash) {
+          // Stat plugs have no name, so read them straight from the plug set (they are not kept as perks).
+          const raw = ((PS[e.randomizedPlugSetHash] || {}).reusablePlugItems || []).filter((p) => p.currentlyCanRoll !== false).map((p) => I[p.plugItemHash]).filter(Boolean);
+          if (raw.length && raw[0].plug && raw[0].plug.plugCategoryIdentifier === 'armor_stats') {
+            let lo = Infinity, hi = 0;
+            for (const it of raw) for (const st of it.investmentStats || []) if (st.value > 0) { lo = Math.min(lo, st.value); hi = Math.max(hi, st.value); }
+            if (hi) statRolls.push([lo, hi]);
+            continue;
+          }
           const opts = plugSet(e.randomizedPlugSetHash, true);
           const c0 = opts.length && perks[opts[0]] ? perks[opts[0]].c : '';
           if (c0 === 'armor_archetypes') archetypes = opts;
-          else if (c0 === 'armor_stats') statRolls.push(opts);
         }
       }
       // Exotic intrinsic may live under a reusable plug set too.
@@ -192,11 +200,7 @@
         }
       }
       // Stat roll range per socket position (primary, secondary, tertiary): [min, max]. Every stat shares the range.
-      const rolls = statRolls.map((col) => {
-        let lo = Infinity, hi = 0;
-        for (const h of col) for (const v of Object.values(perks[h].s || {})) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
-        return hi ? [lo, hi] : null;
-      }).filter(Boolean);
+      const rolls = statRolls;
       const o = {
         h: d.hash, n: d.displayProperties.name, ic: d.displayProperties.icon || '', wm: d.iconWatermark || '',
         ty: clean(d.itemTypeDisplayName), cl: CLASS[d.classType] || 'any', sl: BUCKET[d.inventory.bucketTypeHash],
