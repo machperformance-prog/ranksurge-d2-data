@@ -1,94 +1,601 @@
 {
-  "updated": "November 5, 2026",
-  "status": "Bungie has not released a public Marathon API yet, so live player stats, vault access and loadout equipping are not possible. RankSurge will add them as soon as Bungie opens an API.",
-  "season": {"now": "Nightfall Refresh (live since October 6, 2026)", "next": "Symbiosis", "nextDate": "2026-12-08", "nextNote": "Bungie folded the planned Season 3 into the Symbiosis update. It adds the Bishop Runner shell and new weapons and equipment."},
-  "statsNote": "Weapon stats are the launch values Bungie showed in game (March 2026). Balance patches since launch may have changed some numbers, so check in game before you commit to a build.",
-  "metaNote": "Tiers are the RankSurge team's summary of current public tier lists (shells: July to August 2026, weapons: October 2026). The meta shifts with every patch.",
-  "sources": [
-    ["Bungie press: Marathon Season 2 begins June 2", "https://press.bungie.com/Marathon-Season-2-begins-on-June-2"],
-    ["Game Rant: All weapons and stats in Marathon (March 2026)", "https://gamerant.com/marathon-all-weapons-stats-weapon-types-in-marathon/"],
-    ["PC Gamer: Marathon Runner shells explained (March 2026)", "https://www.pcgamer.com/games/fps/marathon-characters-tier-list-best-runner-shells/"],
-    ["Shacknews: Everything new in Marathon Season 2", "https://www.shacknews.com/article/149331/everything-new-in-marathon-season-2"]
+ "updated": "November 5, 2026",
+ "status": "Bungie has not released a public Marathon API yet, so live player stats, vault access and loadout equipping are not possible. RankSurge will add them as soon as Bungie opens an API.",
+ "season": {
+  "now": "Nightfall Refresh (live since October 6, 2026)",
+  "next": "Symbiosis",
+  "nextDate": "2026-12-08",
+  "nextNote": "Bungie folded the planned Season 3 into the Symbiosis update. It adds the Bishop Runner shell and new weapons and equipment."
+ },
+ "statsNote": "Weapon stats are the launch values Bungie showed in game (March 2026). Balance patches since launch may have changed some numbers, so check in game before you commit to a build.",
+ "metaNote": "Tiers are the RankSurge team's summary of current public tier lists (shells: July to August 2026, weapons: October 2026). The meta shifts with every patch.",
+ "sources": [
+  [
+   "Bungie press: Marathon Season 2 begins June 2",
+   "https://press.bungie.com/Marathon-Season-2-begins-on-June-2"
   ],
-  "shells": [
-    {"id": "triage", "n": "Triage", "role": "Medic and support", "tier": "S", "best": "Squads and ranked", "diff": "Medium",
-     "prime": ["Reboot+", "Charges tendrils that revive downed teammates from range, or hit enemies with an EMP."],
-     "tact": ["Med-Drone", "Sends out up to three drones that heal teammates' health and shields over time."],
-     "traits": [["Shareware.exe", "Patch Kit and Shield Charger healing is shared with teammates who have a drone."], ["Battery Overcharge", "Briefly boosts your weapons at the cost of Heat. Volt weapons that break a shield also EMP the target."]],
-     "why": "The only shell that can bring a whole squad back into a fight, which makes it a core pick for teams."},
-    {"id": "assassin", "n": "Assassin", "role": "Stealth and ambush", "tier": "S", "best": "Solo and flanking", "diff": "Medium",
-     "prime": ["Smoke Screen", "Throws smoke grenades that block vision for anyone inside."],
-     "tact": ["Active Camo", "Turns you invisible for a short time. Moving fast makes you easier to see, and shooting, using items or taking damage breaks it."],
-     "traits": [["Shadow Dive", "Dropping to the ground from mid-air leaves a smoke cloud."], ["Shroud", "You are invisible inside smoke and for a moment after you leave it."]],
-     "why": "Picks fights on its own terms and slips away from bad ones, so it leads solo play."},
-    {"id": "recon", "n": "Recon", "role": "Intel and tracking", "tier": "S", "best": "Squads and ranked", "diff": "Medium",
-     "prime": ["Echo Pulse", "Sends sonar pulses that reveal nearby players and UESC enemies, even invisible ones."],
-     "tact": ["Tracker Drone", "A spider drone runs at enemies and explodes, overheating them and adding burn damage."],
-     "traits": [["Interrogation", "Warns you when an enemy pings you. Finishing an enemy pings their teammates."], ["Stalker Protocol", "After you break an enemy's shield, their footprints stay visible for a short time."]],
-     "why": "Hard counter to stealth shells and gives the whole squad information, which matters most in ranked."},
-    {"id": "sentinel", "n": "Sentinel", "role": "Area denial and defense", "tier": "A", "best": "Squads, chokepoints and Night Marsh", "diff": "Medium", "since": "Season 2",
-     "abilities": [["Snare Mines", "Mines stick to surfaces and lock down enemies who set them off."], ["Prey Tracker", "A short-range radar that marks nearby enemies through walls on your HUD."], ["Castle Doctrine (passive)", "Better resistance after splash damage, and better close-range handling when enemies surround you."]],
-     "why": "Locks down rooms and chokepoints, and the radar is strong in dark zones like Night Marsh."},
-    {"id": "thief", "n": "Thief", "role": "Looting and mobility", "tier": "A", "best": "Solo looting", "diff": "Medium",
-     "prime": ["Pickpocket Drone", "Fly a drone that zaps players and UESC robots to knock loot out of their backpacks."],
-     "tact": ["Grapple Device", "Fires a grappling hook that pulls you to a spot."],
-     "traits": [["X-Ray Visor", "Shows loot containers through walls, colored by rarity, and highlights enemies. Aiming at an enemy disrupts their vision."], ["The Finer Things", "Better weapon handling and faster grapple recharge the more items you carry."]],
-     "why": "The best shell for finding and stealing high-value loot, with a grapple to get out."},
-    {"id": "vandal", "n": "Vandal", "role": "Aggressive mobility", "tier": "A", "best": "Experienced players", "diff": "Hard",
-     "prime": ["Amplify", "Boosts movement speed and weapon handling and cuts the Heat from movement abilities for a short time."],
-     "tact": ["Disrupt Cannon", "Fires a blast that knocks enemies away. Charge it longer for a bigger, stronger blast."],
-     "traits": [["Microjets", "Double jump, at an extra Heat cost."], ["Powerslide", "Slide farther and faster, at an extra Heat cost."]],
-     "why": "The fastest shell in the game if you can manage its Heat, which makes it high reward and hard to master."},
-    {"id": "destroyer", "n": "Destroyer", "role": "Frontline combat", "tier": "B", "best": "Head-on fights", "diff": "Easy", "aka": "Locus",
-     "prime": ["Search and Destroy", "Shoulder pods fire homing missiles that lock down enemies you have already damaged."],
-     "tact": ["Riot Barricade", "A front-facing energy shield that blocks damage. Its cooldown grows the longer you hold it and the more damage it takes."],
-     "traits": [["Thruster", "A sideways dash that also works in the air."], ["Tactical Sprint", "A faster sprint that builds more Heat."]],
-     "why": "Simple and tough in straight fights, but easier to outplay than the top shells."},
-    {"id": "rook", "n": "Rook", "role": "Solo scavenger", "tier": "B", "best": "New players and quick solo runs", "diff": "Easy",
-     "prime": ["Recuperation", "Slowly restores health. Taking damage interrupts it."],
-     "tact": ["Signal Mask", "Hides you from UESC robots. Running or taking damage breaks it."],
-     "traits": [],
-     "limits": "Solo only and joins matches already in progress. Rook cannot progress contracts or use vault gear; it drops in with random basic gear that improves with faction upgrades.",
-     "why": "A free, low-risk way to drop in, grab loot and learn the maps without risking your vault."},
-    {"id": "bishop", "n": "Bishop", "role": "Revealed as a \"robot samurai\"", "tier": "", "best": "", "diff": "", "since": "Symbiosis (December 8, 2026)", "soon": true,
-     "why": "Bungie has named Bishop as the new shell in Symbiosis but has not shared its abilities yet. RankSurge will add them on launch day."}
+  [
+   "Game Rant: All weapons and stats in Marathon (March 2026)",
+   "https://gamerant.com/marathon-all-weapons-stats-weapon-types-in-marathon/"
   ],
-  "weapons": [
-    {"n": "Magnum MC", "ty": "Pistol", "am": "Heavy Rounds", "dmg": 33, "acc": 54.8, "hnd": 40, "rng": 21, "mag": 12},
-    {"n": "V11 Punch", "ty": "Pistol", "am": "Volt Battery", "dmg": 25, "acc": 36, "hnd": 49, "rng": 21, "drain": 4.5},
-    {"n": "CE Tactical Sidearm", "ty": "Pistol", "am": "Light Rounds", "dmg": 20, "acc": 56.3, "hnd": 59, "rng": 26, "mag": 18},
-    {"n": "D54 Battle Pistol", "ty": "Pistol", "am": "", "since": "Season 2", "note": "A pistol-frame SMG made for close fights and stopping shotgun rushes. Bungie has not published its stats."},
-    {"n": "Overrun AR", "ty": "Assault Rifle", "am": "Light Rounds", "dmg": 11.5, "acc": 50.3, "hnd": 46, "rng": 40, "mag": 20},
-    {"n": "M77 Assault Rifle", "ty": "Assault Rifle", "am": "Light Rounds", "dmg": 15, "acc": 59.3, "hnd": 38, "rng": 46, "mag": 24, "tier": "A", "why": "Stable, easy-to-control fire for mid-range duels."},
-    {"n": "Impact HAR", "ty": "Assault Rifle", "am": "Heavy Rounds", "dmg": 24, "acc": 48.5, "hnd": 36, "rng": 60, "mag": 18, "tier": "A", "why": "Hits hard at medium range if you can control the recoil."},
-    {"n": "V75 Scar", "ty": "Assault Rifle", "am": "Volt Battery", "dmg": 14.5, "acc": 59.3, "hnd": 42, "rng": 46, "drain": 2.5},
-    {"n": "Longshot", "ty": "Sniper Rifle", "am": "Light Rounds", "dmg": 69.5, "acc": 80.9, "hnd": 43, "rng": 175, "mag": 4},
-    {"n": "Outland", "ty": "Sniper Rifle", "am": "MIPS", "dmg": 74, "acc": 79.1, "hnd": 29, "rng": 175, "mag": 4, "tier": "S", "why": "One-shot threat that controls open ground at long range."},
-    {"n": "V99 Channel Rifle", "ty": "Sniper Rifle", "am": "Volt Battery", "dmg": 67, "acc": 79.4, "hnd": 29, "rng": 175, "drain": 33.4},
-    {"n": "WSTR Combat Shotgun", "ty": "Shotgun", "am": "MIPS", "dmg": 15, "acc": 50, "hnd": 49, "rng": 4, "mag": 2, "tier": "S", "why": "Deadly in tight rooms and corridors."},
-    {"n": "V85 Circuit Breaker", "ty": "Shotgun", "am": "Volt Battery", "dmg": 20.4, "hnd": 64, "rng": 11, "tier": "A", "why": "Strips shields fast so a teammate can finish."},
-    {"n": "Misriah 2442", "ty": "Shotgun", "am": "MIPS", "dmg": 11.8, "hnd": 64, "rng": 11, "mag": 4, "tier": "A", "why": "Reliable backup for finishing weakened enemies up close."},
-    {"n": "Bully SMG", "ty": "SMG", "am": "Heavy Rounds", "dmg": 15, "acc": 62, "hnd": 47, "rng": 27, "mag": 23, "tier": "S", "why": "Wins most close-quarters fights and suits players who push first."},
-    {"n": "V22 Volt Thrower", "ty": "SMG", "am": "Volt Battery", "dmg": 21, "acc": 74.1, "hnd": 42, "rng": 11, "drain": 1.2},
-    {"n": "BRRT SMG", "ty": "SMG", "am": "Light Rounds", "dmg": 11, "acc": 60.5, "hnd": 35, "rng": 16, "mag": 35},
-    {"n": "Copperhead RF", "ty": "SMG", "am": "Light Rounds", "dmg": 12, "acc": 49.1, "hnd": 46, "rng": 20, "mag": 20, "tier": "A", "why": "Fast, mobile close-range option."},
-    {"n": "Conquest LMG", "ty": "Machine Gun", "am": "Light Rounds", "dmg": 16, "acc": 65.7, "hnd": 22, "rng": 60, "mag": 36},
-    {"n": "Demolition HMG", "ty": "Machine Gun", "am": "Heavy Rounds", "dmg": 31.5, "acc": 47.4, "hnd": 31, "rng": 33, "mag": 20},
-    {"n": "Retaliator LMG", "ty": "Machine Gun", "am": "Light Rounds", "dmg": 11.8, "acc": 49.8, "hnd": 25, "rng": 51, "mag": 44},
-    {"n": "V66 Lookout", "ty": "Precision Rifle", "am": "Volt Battery", "dmg": 26, "acc": 126.3, "hnd": 45, "rng": 62, "drain": 3.4},
-    {"n": "Hardline PR", "ty": "Precision Rifle", "am": "Heavy Rounds", "dmg": 23, "acc": 66.9, "hnd": 36, "rng": 74, "mag": 14, "tier": "A", "why": "Strong damage per trigger pull at range."},
-    {"n": "Stryder M1T", "ty": "Precision Rifle", "am": "Light Rounds", "dmg": 31, "acc": 59.4, "hnd": 39, "rng": 84, "mag": 12},
-    {"n": "Twin Tap HBR", "ty": "Precision Rifle", "am": "Heavy Rounds", "dmg": 13, "acc": 59.8, "hnd": 51, "rng": 48, "mag": 20},
-    {"n": "Repeater HPR", "ty": "Precision Rifle", "am": "Heavy Rounds", "dmg": 38, "acc": 60.4, "hnd": 52, "rng": 37, "mag": 9},
-    {"n": "BR33 Volley Rifle", "ty": "Precision Rifle", "am": "Light Rounds", "dmg": 14.8, "acc": 61.2, "hnd": 39.6, "rng": 48, "mag": 31, "tier": "S", "why": "Precise mid-range burst rifle that anchors team fights."},
-    {"n": "Ares RG", "ty": "Railgun", "am": "Volt Battery", "dmg": 136, "acc": 100, "hnd": 48, "rng": 60},
-    {"n": "V00 Zeus RG", "ty": "Railgun", "am": "Volt Battery", "dmg": 120, "acc": 199, "hnd": 49, "rng": 155, "drain": 50}
+  [
+   "PC Gamer: Marathon Runner shells explained (March 2026)",
+   "https://www.pcgamer.com/games/fps/marathon-characters-tier-list-best-runner-shells/"
   ],
-  "loadouts": [
-    {"n": "Close-quarters entry", "shell": "assassin", "w": ["Bully SMG", "WSTR Combat Shotgun"], "why": "Push rooms and corridors: the SMG wins short fights and the shotgun ends them."},
-    {"n": "Balanced flex", "shell": "recon", "w": ["BR33 Volley Rifle", "Bully SMG"], "why": "A mid-range rifle for open ground plus an SMG for when fights close in."},
-    {"n": "Long-range marksman", "shell": "recon", "w": ["Outland", "Impact HAR"], "why": "Hold lanes with the sniper and fall back on the heavy assault rifle at medium range."},
-    {"n": "Squad medic", "shell": "triage", "w": ["M77 Assault Rifle", "V85 Circuit Breaker"], "why": "Steady mid-range fire while you heal, with a shield-breaking shotgun for anyone who rushes you."},
-    {"n": "Budget run", "shell": "rook", "w": ["Stryder M1T", "Misriah 2442"], "why": "Cheap, common weapons for a low-risk run when you don't want to spend vault gear."}
+  [
+   "Shacknews: Everything new in Marathon Season 2",
+   "https://www.shacknews.com/article/149331/everything-new-in-marathon-season-2"
   ]
+ ],
+ "shells": [
+  {
+   "id": "triage",
+   "n": "Triage",
+   "role": "Medic and support",
+   "tier": "S",
+   "best": "Squads and ranked",
+   "diff": "Medium",
+   "prime": [
+    "Reboot+",
+    "Charges tendrils that revive downed teammates from range, or hit enemies with an EMP."
+   ],
+   "tact": [
+    "Med-Drone",
+    "Sends out up to three drones that heal teammates' health and shields over time."
+   ],
+   "traits": [
+    [
+     "Shareware.exe",
+     "Patch Kit and Shield Charger healing is shared with teammates who have a drone."
+    ],
+    [
+     "Battery Overcharge",
+     "Briefly boosts your weapons at the cost of Heat. Volt weapons that break a shield also EMP the target."
+    ]
+   ],
+   "why": "The only shell that can bring a whole squad back into a fight, which makes it a core pick for teams."
+  },
+  {
+   "id": "assassin",
+   "n": "Assassin",
+   "role": "Stealth and ambush",
+   "tier": "S",
+   "best": "Solo and flanking",
+   "diff": "Medium",
+   "prime": [
+    "Smoke Screen",
+    "Throws smoke grenades that block vision for anyone inside."
+   ],
+   "tact": [
+    "Active Camo",
+    "Turns you invisible for a short time. Moving fast makes you easier to see, and shooting, using items or taking damage breaks it."
+   ],
+   "traits": [
+    [
+     "Shadow Dive",
+     "Dropping to the ground from mid-air leaves a smoke cloud."
+    ],
+    [
+     "Shroud",
+     "You are invisible inside smoke and for a moment after you leave it."
+    ]
+   ],
+   "why": "Picks fights on its own terms and slips away from bad ones, so it leads solo play."
+  },
+  {
+   "id": "recon",
+   "n": "Recon",
+   "role": "Intel and tracking",
+   "tier": "S",
+   "best": "Squads and ranked",
+   "diff": "Medium",
+   "prime": [
+    "Echo Pulse",
+    "Sends sonar pulses that reveal nearby players and UESC enemies, even invisible ones."
+   ],
+   "tact": [
+    "Tracker Drone",
+    "A spider drone runs at enemies and explodes, overheating them and adding burn damage."
+   ],
+   "traits": [
+    [
+     "Interrogation",
+     "Warns you when an enemy pings you. Finishing an enemy pings their teammates."
+    ],
+    [
+     "Stalker Protocol",
+     "After you break an enemy's shield, their footprints stay visible for a short time."
+    ]
+   ],
+   "why": "Hard counter to stealth shells and gives the whole squad information, which matters most in ranked."
+  },
+  {
+   "id": "sentinel",
+   "n": "Sentinel",
+   "role": "Area denial and defense",
+   "tier": "A",
+   "best": "Squads, chokepoints and Night Marsh",
+   "diff": "Medium",
+   "since": "Season 2",
+   "abilities": [
+    [
+     "Snare Mines",
+     "Mines stick to surfaces and lock down enemies who set them off."
+    ],
+    [
+     "Prey Tracker",
+     "A short-range radar that marks nearby enemies through walls on your HUD."
+    ],
+    [
+     "Castle Doctrine (passive)",
+     "Better resistance after splash damage, and better close-range handling when enemies surround you."
+    ]
+   ],
+   "why": "Locks down rooms and chokepoints, and the radar is strong in dark zones like Night Marsh."
+  },
+  {
+   "id": "thief",
+   "n": "Thief",
+   "role": "Looting and mobility",
+   "tier": "A",
+   "best": "Solo looting",
+   "diff": "Medium",
+   "prime": [
+    "Pickpocket Drone",
+    "Fly a drone that zaps players and UESC robots to knock loot out of their backpacks."
+   ],
+   "tact": [
+    "Grapple Device",
+    "Fires a grappling hook that pulls you to a spot."
+   ],
+   "traits": [
+    [
+     "X-Ray Visor",
+     "Shows loot containers through walls, colored by rarity, and highlights enemies. Aiming at an enemy disrupts their vision."
+    ],
+    [
+     "The Finer Things",
+     "Better weapon handling and faster grapple recharge the more items you carry."
+    ]
+   ],
+   "why": "The best shell for finding and stealing high-value loot, with a grapple to get out."
+  },
+  {
+   "id": "vandal",
+   "n": "Vandal",
+   "role": "Aggressive mobility",
+   "tier": "A",
+   "best": "Experienced players",
+   "diff": "Hard",
+   "prime": [
+    "Amplify",
+    "Boosts movement speed and weapon handling and cuts the Heat from movement abilities for a short time."
+   ],
+   "tact": [
+    "Disrupt Cannon",
+    "Fires a blast that knocks enemies away. Charge it longer for a bigger, stronger blast."
+   ],
+   "traits": [
+    [
+     "Microjets",
+     "Double jump, at an extra Heat cost."
+    ],
+    [
+     "Powerslide",
+     "Slide farther and faster, at an extra Heat cost."
+    ]
+   ],
+   "why": "The fastest shell in the game if you can manage its Heat, which makes it high reward and hard to master."
+  },
+  {
+   "id": "destroyer",
+   "n": "Destroyer",
+   "role": "Frontline combat",
+   "tier": "B",
+   "best": "Head-on fights",
+   "diff": "Easy",
+   "aka": "Locus",
+   "prime": [
+    "Search and Destroy",
+    "Shoulder pods fire homing missiles that lock down enemies you have already damaged."
+   ],
+   "tact": [
+    "Riot Barricade",
+    "A front-facing energy shield that blocks damage. Its cooldown grows the longer you hold it and the more damage it takes."
+   ],
+   "traits": [
+    [
+     "Thruster",
+     "A sideways dash that also works in the air."
+    ],
+    [
+     "Tactical Sprint",
+     "A faster sprint that builds more Heat."
+    ]
+   ],
+   "why": "Simple and tough in straight fights, but easier to outplay than the top shells."
+  },
+  {
+   "id": "rook",
+   "n": "Rook",
+   "role": "Solo scavenger",
+   "tier": "B",
+   "best": "New players and quick solo runs",
+   "diff": "Easy",
+   "prime": [
+    "Recuperation",
+    "Slowly restores health. Taking damage interrupts it."
+   ],
+   "tact": [
+    "Signal Mask",
+    "Hides you from UESC robots. Running or taking damage breaks it."
+   ],
+   "traits": [],
+   "limits": "Solo only and joins matches already in progress. Rook cannot progress contracts or use vault gear; it drops in with random basic gear that improves with faction upgrades.",
+   "why": "A low-risk way to drop in, grab loot and learn the maps without risking your vault."
+  },
+  {
+   "id": "bishop",
+   "n": "Bishop",
+   "role": "Revealed as a \"robot samurai\"",
+   "tier": "",
+   "best": "",
+   "diff": "",
+   "since": "Symbiosis (December 8, 2026)",
+   "soon": true,
+   "why": "Bungie has named Bishop as the new shell in Symbiosis but has not shared its abilities yet. RankSurge will add them on launch day."
+  }
+ ],
+ "weapons": [
+  {
+   "n": "Magnum MC",
+   "ty": "Pistol",
+   "am": "Heavy Rounds",
+   "dmg": 33,
+   "acc": 54.8,
+   "hnd": 40,
+   "rng": 21,
+   "mag": 12
+  },
+  {
+   "n": "V11 Punch",
+   "ty": "Pistol",
+   "am": "Volt Battery",
+   "dmg": 25,
+   "acc": 36,
+   "hnd": 49,
+   "rng": 21,
+   "drain": 4.5
+  },
+  {
+   "n": "CE Tactical Sidearm",
+   "ty": "Pistol",
+   "am": "Light Rounds",
+   "dmg": 20,
+   "acc": 56.3,
+   "hnd": 59,
+   "rng": 26,
+   "mag": 18
+  },
+  {
+   "n": "D54 Battle Pistol",
+   "ty": "Pistol",
+   "am": "",
+   "since": "Season 2",
+   "note": "A pistol-frame SMG made for close fights and stopping shotgun rushes. Bungie has not published its stats."
+  },
+  {
+   "n": "Overrun AR",
+   "ty": "Assault Rifle",
+   "am": "Light Rounds",
+   "dmg": 11.5,
+   "acc": 50.3,
+   "hnd": 46,
+   "rng": 40,
+   "mag": 20
+  },
+  {
+   "n": "M77 Assault Rifle",
+   "ty": "Assault Rifle",
+   "am": "Light Rounds",
+   "dmg": 15,
+   "acc": 59.3,
+   "hnd": 38,
+   "rng": 46,
+   "mag": 24,
+   "tier": "A",
+   "why": "Stable, easy-to-control fire for mid-range duels."
+  },
+  {
+   "n": "Impact HAR",
+   "ty": "Assault Rifle",
+   "am": "Heavy Rounds",
+   "dmg": 24,
+   "acc": 48.5,
+   "hnd": 36,
+   "rng": 60,
+   "mag": 18,
+   "tier": "A",
+   "why": "Hits hard at medium range if you can control the recoil."
+  },
+  {
+   "n": "V75 Scar",
+   "ty": "Assault Rifle",
+   "am": "Volt Battery",
+   "dmg": 14.5,
+   "acc": 59.3,
+   "hnd": 42,
+   "rng": 46,
+   "drain": 2.5
+  },
+  {
+   "n": "Longshot",
+   "ty": "Sniper Rifle",
+   "am": "Light Rounds",
+   "dmg": 69.5,
+   "acc": 80.9,
+   "hnd": 43,
+   "rng": 175,
+   "mag": 4
+  },
+  {
+   "n": "Outland",
+   "ty": "Sniper Rifle",
+   "am": "MIPS",
+   "dmg": 74,
+   "acc": 79.1,
+   "hnd": 29,
+   "rng": 175,
+   "mag": 4,
+   "tier": "S",
+   "why": "One-shot threat that controls open ground at long range."
+  },
+  {
+   "n": "V99 Channel Rifle",
+   "ty": "Sniper Rifle",
+   "am": "Volt Battery",
+   "dmg": 67,
+   "acc": 79.4,
+   "hnd": 29,
+   "rng": 175,
+   "drain": 33.4
+  },
+  {
+   "n": "WSTR Combat Shotgun",
+   "ty": "Shotgun",
+   "am": "MIPS",
+   "dmg": 15,
+   "acc": 50,
+   "hnd": 49,
+   "rng": 4,
+   "mag": 2,
+   "tier": "S",
+   "why": "Deadly in tight rooms and corridors."
+  },
+  {
+   "n": "V85 Circuit Breaker",
+   "ty": "Shotgun",
+   "am": "Volt Battery",
+   "dmg": 20.4,
+   "hnd": 64,
+   "rng": 11,
+   "tier": "A",
+   "why": "Strips shields fast so a teammate can finish."
+  },
+  {
+   "n": "Misriah 2442",
+   "ty": "Shotgun",
+   "am": "MIPS",
+   "dmg": 11.8,
+   "hnd": 64,
+   "rng": 11,
+   "mag": 4,
+   "tier": "A",
+   "why": "Reliable backup for finishing weakened enemies up close."
+  },
+  {
+   "n": "Bully SMG",
+   "ty": "SMG",
+   "am": "Heavy Rounds",
+   "dmg": 15,
+   "acc": 62,
+   "hnd": 47,
+   "rng": 27,
+   "mag": 23,
+   "tier": "S",
+   "why": "Wins most close-quarters fights and suits players who push first."
+  },
+  {
+   "n": "V22 Volt Thrower",
+   "ty": "SMG",
+   "am": "Volt Battery",
+   "dmg": 21,
+   "acc": 74.1,
+   "hnd": 42,
+   "rng": 11,
+   "drain": 1.2
+  },
+  {
+   "n": "BRRT SMG",
+   "ty": "SMG",
+   "am": "Light Rounds",
+   "dmg": 11,
+   "acc": 60.5,
+   "hnd": 35,
+   "rng": 16,
+   "mag": 35
+  },
+  {
+   "n": "Copperhead RF",
+   "ty": "SMG",
+   "am": "Light Rounds",
+   "dmg": 12,
+   "acc": 49.1,
+   "hnd": 46,
+   "rng": 20,
+   "mag": 20,
+   "tier": "A",
+   "why": "Fast, mobile close-range option."
+  },
+  {
+   "n": "Conquest LMG",
+   "ty": "Machine Gun",
+   "am": "Light Rounds",
+   "dmg": 16,
+   "acc": 65.7,
+   "hnd": 22,
+   "rng": 60,
+   "mag": 36
+  },
+  {
+   "n": "Demolition HMG",
+   "ty": "Machine Gun",
+   "am": "Heavy Rounds",
+   "dmg": 31.5,
+   "acc": 47.4,
+   "hnd": 31,
+   "rng": 33,
+   "mag": 20
+  },
+  {
+   "n": "Retaliator LMG",
+   "ty": "Machine Gun",
+   "am": "Light Rounds",
+   "dmg": 11.8,
+   "acc": 49.8,
+   "hnd": 25,
+   "rng": 51,
+   "mag": 44
+  },
+  {
+   "n": "V66 Lookout",
+   "ty": "Precision Rifle",
+   "am": "Volt Battery",
+   "dmg": 26,
+   "acc": 126.3,
+   "hnd": 45,
+   "rng": 62,
+   "drain": 3.4
+  },
+  {
+   "n": "Hardline PR",
+   "ty": "Precision Rifle",
+   "am": "Heavy Rounds",
+   "dmg": 23,
+   "acc": 66.9,
+   "hnd": 36,
+   "rng": 74,
+   "mag": 14,
+   "tier": "A",
+   "why": "Strong damage per trigger pull at range."
+  },
+  {
+   "n": "Stryder M1T",
+   "ty": "Precision Rifle",
+   "am": "Light Rounds",
+   "dmg": 31,
+   "acc": 59.4,
+   "hnd": 39,
+   "rng": 84,
+   "mag": 12
+  },
+  {
+   "n": "Twin Tap HBR",
+   "ty": "Precision Rifle",
+   "am": "Heavy Rounds",
+   "dmg": 13,
+   "acc": 59.8,
+   "hnd": 51,
+   "rng": 48,
+   "mag": 20
+  },
+  {
+   "n": "Repeater HPR",
+   "ty": "Precision Rifle",
+   "am": "Heavy Rounds",
+   "dmg": 38,
+   "acc": 60.4,
+   "hnd": 52,
+   "rng": 37,
+   "mag": 9
+  },
+  {
+   "n": "BR33 Volley Rifle",
+   "ty": "Precision Rifle",
+   "am": "Light Rounds",
+   "dmg": 14.8,
+   "acc": 61.2,
+   "hnd": 39.6,
+   "rng": 48,
+   "mag": 31,
+   "tier": "S",
+   "why": "Precise mid-range burst rifle that anchors team fights."
+  },
+  {
+   "n": "Ares RG",
+   "ty": "Railgun",
+   "am": "Volt Battery",
+   "dmg": 136,
+   "acc": 100,
+   "hnd": 48,
+   "rng": 60
+  },
+  {
+   "n": "V00 Zeus RG",
+   "ty": "Railgun",
+   "am": "Volt Battery",
+   "dmg": 120,
+   "acc": 199,
+   "hnd": 49,
+   "rng": 155,
+   "drain": 50
+  }
+ ],
+ "loadouts": [
+  {
+   "n": "Close-quarters entry",
+   "shell": "assassin",
+   "w": [
+    "Bully SMG",
+    "WSTR Combat Shotgun"
+   ],
+   "why": "Push rooms and corridors: the SMG wins short fights and the shotgun ends them."
+  },
+  {
+   "n": "Balanced flex",
+   "shell": "recon",
+   "w": [
+    "BR33 Volley Rifle",
+    "Bully SMG"
+   ],
+   "why": "A mid-range rifle for open ground plus an SMG for when fights close in."
+  },
+  {
+   "n": "Long-range marksman",
+   "shell": "recon",
+   "w": [
+    "Outland",
+    "Impact HAR"
+   ],
+   "why": "Hold lanes with the sniper and fall back on the heavy assault rifle at medium range."
+  },
+  {
+   "n": "Squad medic",
+   "shell": "triage",
+   "w": [
+    "M77 Assault Rifle",
+    "V85 Circuit Breaker"
+   ],
+   "why": "Steady mid-range fire while you heal, with a shield-breaking shotgun for anyone who rushes you."
+  },
+  {
+   "n": "Budget run",
+   "shell": "destroyer",
+   "w": [
+    "Stryder M1T",
+    "Misriah 2442"
+   ],
+   "why": "Cheap, common weapons on a tough, easy-to-play shell, for a low-risk run when you don't want to spend your best vault gear."
+  }
+ ]
 }
