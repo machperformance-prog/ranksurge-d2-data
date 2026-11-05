@@ -476,7 +476,7 @@
   function addToBuild(key) {
     const S = bLoad(), b = S[S.cur];
     if (key[0] === 'w') { const w = D.WH[key.slice(1)]; if (!w) return; b.w[w.sl] = w.h; b.wp[w.sl] = []; }
-    else { const a = D.AH[key.slice(1)]; if (!a) return; if (a.cl !== 'any' && a.cl !== b.c) { b.c = a.cl; Object.keys(b.a).forEach((s) => { const x = D.AH[b.a[s]]; if (x && x.cl !== 'any' && x.cl !== a.cl) b.a[s] = null; }); } b.a[a.sl] = a.h; b.ap[a.sl] = { at: (a.at || [])[0] || null, t: null, g: 5 }; }
+    else { const a = D.AH[key.slice(1)]; if (!a) return; if (a.cl !== 'any' && a.cl !== b.c) { b.c = a.cl; Object.keys(b.a).forEach((s) => { const x = D.AH[b.a[s]]; if (x && x.cl !== 'any' && x.cl !== a.cl) b.a[s] = null; }); } b.a[a.sl] = a.h; b.ap[a.sl] = apDefault(a); }
     bSave(S);
     if (MODE === 'build') { closeSheet(); buildView(); toast('Added to Build ' + S.cur); }
     else toast('Added to Build ' + S.cur + '. Open the build planner to see the totals.');
@@ -512,6 +512,43 @@
     const sub = b.sub, elemW = SLOTW.map((sl) => D.WH[b.w[sl]]).filter(Boolean).filter((w) => w.el === sub).length;
     return { t, bonuses, warn, missing, elemW };
   }
+
+  /* ---------- easy-build helpers ---------- */
+  function apDefault(a, want) {
+    const at = (a.at || []).slice();
+    let pickAt = at[0] || null;
+    if (want && at.length) { const m = at.find((h) => perk(h) && perk(h).pr === want); if (m) pickAt = m; }
+    const p = perk(pickAt), t = AST.find((x) => !p || (x !== p.pr && x !== p.se)) || null;
+    return { at: pickAt, t, g: 5 };
+  }
+  const isTouch = () => matchMedia('(hover: none), (max-width: 760px)').matches;
+  function curatedFor(kind, sl, cls) {
+    const c = D.curated && D.curated.picks ? D.curated.picks : [];
+    return c.filter((p) => p.k === kind).map((p) => (kind === 'a' ? D.A.find((a) => a.n === p.n && a.sl === sl && (a.cl === cls || a.cl === 'any')) : D.W.find((w) => w.n === p.n && !w.ad && w.sl === sl))).filter(Boolean);
+  }
+  function bestSet(cls) {
+    // The newest armor set that has a piece for every non-class slot for this class.
+    const by = {};
+    D.A.forEach((a) => { if (!a.set || a.r === 'exotic' || (a.cl !== cls && a.cl !== 'any')) return; (by[a.set] = by[a.set] || {})[a.sl] = by[a.set][a.sl] && rel(by[a.set][a.sl].rel) > rel(a.rel) ? by[a.set][a.sl] : a; });
+    return Object.keys(by).filter((k) => ['helmet', 'arms', 'chest', 'legs'].every((sl) => by[k][sl])).sort((x, y) => rel(by[y].helmet.rel) - rel(by[x].helmet.rel)).map((k) => ({ k, n: D.sets[k] ? D.sets[k].n : 'Set', pieces: by[k] }));
+  }
+  function fillSet(b, set, keepExotic) {
+    const exSlot = SLOTA.find((sl) => { const a = D.AH[b.a[sl]]; return a && a.r === 'exotic'; });
+    Object.keys(set.pieces).forEach((sl) => { if (keepExotic && sl === exSlot) return; const a = set.pieces[sl]; b.a[sl] = a.h; b.ap[sl] = apDefault(a, b.focus); });
+    b.real = null;
+  }
+  function starter(b) {
+    const w = {}; SLOTW.forEach((sl) => { const c = curatedFor('w', sl, b.c); const nonEx = c.filter((x) => x.r !== 'exotic'); w[sl] = (sl === 'power' ? c[0] : nonEx[0] || c[0]) || null; });
+    // only one exotic weapon
+    let ex = 0; SLOTW.forEach((sl) => { if (w[sl] && w[sl].r === 'exotic') { ex++; if (ex > 1) { const alt = curatedFor('w', sl, b.c).find((x) => x.r !== 'exotic'); w[sl] = alt || null; } } });
+    SLOTW.forEach((sl) => { b.w[sl] = w[sl] ? w[sl].h : null; b.wp[sl] = []; });
+    const sets = bestSet(b.c); if (sets[0]) fillSet(b, sets[0]);
+    const exA = D.A.filter((a) => a.r === 'exotic' && a.cl === b.c && (D.curated && D.curated.picks || []).some((p) => p.k === 'a' && p.n === a.n))[0];
+    if (exA) { b.a[exA.sl] = exA.h; b.ap[exA.sl] = apDefault(exA, b.focus); }
+    SLOTA.forEach((sl) => { if (!b.a[sl]) { const c = D.A.filter((a) => a.sl === sl && a.cl === b.c && a.r !== 'exotic' && a.at).sort((x, y) => rel(y.rel) - rel(x.rel))[0]; if (c) { b.a[sl] = c.h; b.ap[sl] = apDefault(c, b.focus); } } });
+    b.real = null;
+  }
+  function focusStat(b, stat) { b.focus = stat; SLOTA.forEach((sl) => { const a = D.AH[b.a[sl]]; if (a && a.at) b.ap[sl] = apDefault(a, stat); }); b.real = null; }
   function buildView() {
     const S = bLoad();
     const h = location.hash.match(/^#b=([A-Za-z0-9_-]+)/);
@@ -526,18 +563,22 @@
     APP.innerHTML = `${hubNav()}<div class="d2-bld">
       <div class="d2-bld__tabs" role="tablist" aria-label="Builds">${['A', 'B'].map((k) => `<button type="button" role="tab" aria-selected="${S.cur === k}" data-btab="${k}">Build ${k}<small>${esc(S[k].name || CLSN[S[k].c])}</small></button>`).join('')}<button type="button" role="tab" aria-selected="false" data-btab="CMP">${ico('compare')}Compare A vs B</button></div>
       <div class="d2-bld__top"><label class="d2-sel"><span>Build name</span><input type="text" name="bname" maxlength="40" value="${esc(b.name)}" placeholder="Like: Void Hunter for raids"></label>${chips('bcls', CLS.map((c) => [c, CLSN[c]]), b.c, 'Class')}${chips('bsub', SUBS.map((s) => [s, s]), b.sub, 'Subclass')}</div>
+      <div class="d2-easy" role="group" aria-label="Quick start"><div class="d2-easy__row"><button type="button" class="rs-btn" data-starter>${ico('bolt')}Fill a starter ${esc(CLSN[b.c])} build</button><label class="d2-sel d2-sel--s"><span>Armor set</span><select name="eset"><option value="">Pick a set to fill all armor</option>${bestSet(b.c).slice(0, 12).map((x) => `<option value="${x.k}">${esc(x.n)}</option>`).join('')}</select></label><label class="d2-sel d2-sel--s"><span>Focus stat</span><select name="efocus"><option value="">Choose the stat to max</option>${AST.map((x) => `<option${b.focus === x ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div><p class="d2-fine">New here? Tap <b>Fill a starter build</b> for meta picks, then swap anything you like. Picking a focus stat sets every armor piece's archetype to boost it.</p></div>
       <div class="d2-bld__grid"><section><h2>Weapons</h2><div class="d2-slots">${slotW}</div><h2>Armor</h2><div class="d2-slots">${slotA}</div></section>
       <aside class="d2-bld__sum" aria-label="Build totals"><h2>Build stats</h2><div class="d2-asts">${stats}</div><p class="d2-fine">Total ${total} from armor${b.real ? ' (your real rolls)' : ' (estimated from each piece\'s archetype, tertiary stat and gear tier)'}. Each stat goes to 200: 100 gives the full base effect, and points past 100 add an extra bonus. Mods, tuning and your subclass fragments add more in game.</p>
       ${T.warn.length ? `<div class="d2-warn" role="alert">${T.warn.map((w) => `<p>${esc(w)}</p>`).join('')}</div>` : ''}
       ${T.bonuses.length ? `<h3>Set bonuses</h3><ul class="d2-setp">${T.bonuses.map((x) => `<li class="${x.on ? 'is-on' : ''}"><b>${esc(x.set)} · ${x.n} pieces${x.on ? ' · Active' : ` · ${x.have}/${x.n}`}</b><p><i>${esc(x.name)}:</i> ${esc(x.d)}</p></li>`).join('')}</ul>` : ''}
       <h3>Synergy</h3><p class="d2-fine">${T.elemW ? `${T.elemW} of your weapons match your ${esc(b.sub)} subclass, which helps with element-based perks, fragments and set bonuses.` : `None of your weapons match your ${esc(b.sub)} subclass element yet.`}</p>
-      <div class="d2-bld__act"><button type="button" class="rs-btn" data-push>${ico('push')}Save to in-game loadout</button><button type="button" class="rs-btn rs-btn--ghost" data-share>${ico('share')}Share build</button><button type="button" class="rs-btn rs-btn--ghost" data-mine>${ico('user')}${b.real ? 'Refresh my rolls' : 'Use my real gear stats'}</button><button type="button" class="d2-link" data-copyab>Copy to Build ${S.cur === 'A' ? 'B' : 'A'}</button><button type="button" class="d2-link" data-clear>${ico('trash')}Clear build</button></div>${buildShare(b)}</aside></div></div>`;
+      <div class="d2-bld__act"><button type="button" class="rs-btn" data-push>${ico('push')}Save to in-game loadout</button><button type="button" class="rs-btn rs-btn--ghost" data-share>${ico('share')}Share build</button><button type="button" class="rs-btn rs-btn--ghost" data-mine>${ico('user')}${b.real ? 'Refresh my rolls' : 'Use my real gear stats'}</button><button type="button" class="d2-link" data-copyab>Copy to Build ${S.cur === 'A' ? 'B' : 'A'}</button><button type="button" class="d2-link" data-clear>${ico('trash')}Clear build</button></div>${buildShare(b)}</aside></div></div>
+      <div class="d2-mbar" aria-hidden="true"><div class="d2-mbar__st">${AST.map((x) => `<span><small>${esc(x.slice(0, 3))}</small><b>${T.t[x]}</b></span>`).join('')}</div><button type="button" class="rs-btn" data-push tabindex="-1">${ico('push')}Save</button><button type="button" class="d2-iconbtn" data-jump tabindex="-1" aria-label="Show build stats">${ico('chart')}</button></div>`;
     const ui = APP;
     ui.onchange = (e) => {
       const n = e.target.name;
       if (n === 'bcls') { b.c = e.target.value; Object.keys(b.a).forEach((s) => { const x = D.AH[b.a[s]]; if (x && x.cl !== 'any' && x.cl !== b.c) b.a[s] = null; }); b.real = null; }
       else if (n === 'bsub') b.sub = e.target.value;
       else if (n === 'bname') b.name = e.target.value.slice(0, 40);
+      else if (n === 'eset') { const set = bestSet(b.c).find((x) => x.k === e.target.value); if (!set) return; fillSet(b, set, true); toast('Filled your armor with the ' + set.n + ' set'); }
+      else if (n === 'efocus') { if (!e.target.value) return; focusStat(b, e.target.value); toast('Armor archetypes set to boost ' + e.target.value); }
       else if (n && n.indexOf('ap-') === 0) { const p = n.split('-'); b.ap[p[2]] = b.ap[p[2]] || {}; b.ap[p[2]][p[1]] = p[1] === 'g' ? +e.target.value : (p[1] === 'at' ? +e.target.value || null : e.target.value || null); b.real = null; }
       else if (n && n.indexOf('wp-') === 0) { const p = n.split('-'); b.wp[p[1]] = b.wp[p[1]] || []; b.wp[p[1]][+p[2]] = +e.target.value || null; }
       else return;
@@ -551,6 +592,8 @@
       if (e.target.closest('[data-share]')) { const u = location.origin + location.pathname + '#b=' + enc({ c: b.c, sub: b.sub, name: b.name, w: b.w, wp: b.wp, a: b.a, ap: b.ap }); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast('Build link copied. Anyone with it sees this build.'), () => prompt('Copy this build link', u)); return; }
       if (e.target.closest('[data-copyab]')) { const o2 = S.cur === 'A' ? 'B' : 'A'; S[o2] = JSON.parse(JSON.stringify(b)); bSave(S); toast('Copied to Build ' + o2); return buildView(); }
       if (e.target.closest('[data-clear]')) { if (confirm('Clear Build ' + S.cur + '?')) { S[S.cur] = blank(b.c); bSave(S); buildView(); } return; }
+      if (e.target.closest('[data-starter]')) { starter(b); bSave(S); buildView(); toast('Starter ' + CLSN[b.c] + ' build filled. Tap any slot to change it.'); return; }
+      if (e.target.closest('[data-jump]')) { const sm = $('.d2-bld__sum', APP); if (sm) sm.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); return; }
       if (e.target.closest('[data-mine]')) return useMine(b, S);
       if (e.target.closest('[data-push]')) return pushLoadout(b);
     };
@@ -559,7 +602,7 @@
   function buildShare(b) { const any = SLOTW.some((s) => b.w[s]) || SLOTA.some((s) => b.a[s]); if (!any) return ''; const lbl = `${b.sub} ${CLSN[b.c]}`; return shareBlock('b', null, lbl, buildURL(b), (b.name || lbl + ' build') + ' | Destiny 2 build on RankSurge'); }
   function slotCard(b, sl, kind) {
     const it = kind === 'w' ? D.WH[b.w[sl]] : D.AH[b.a[sl]];
-    if (!it) return `<div class="d2-slot is-empty"><span class="d2-slot__k">${ico(sl)}${esc(SLOTN[sl])}</span><button type="button" class="rs-btn rs-btn--ghost" data-pick="${kind}-${sl}">Choose ${esc(SLOTN[sl].toLowerCase())}</button></div>`;
+    if (!it) return `<button type="button" class="d2-slot is-empty" data-pick="${kind}-${sl}"><span class="d2-slot__k">${ico(sl)}${esc(SLOTN[sl])}</span><span class="d2-slot__add">+ Choose ${esc(SLOTN[sl].toLowerCase())}</span></button>`;
     let extra = '';
     if (kind === 'w' && it.r !== 'exotic') {
       const wp = b.wp[sl] || [];
@@ -583,12 +626,13 @@
     const pool = kind === 'w' ? D.W.filter((w) => w.sl === sl && !w.ad) : D.A.filter((a) => a.sl === sl && (a.cl === b.c || a.cl === 'any') && (a.a3 || a.r === 'exotic'));
     const d = sheet(`<h2 class="d2-sh__h">${ico(sl)}Choose ${esc(SLOTN[sl].toLowerCase())}${kind === 'a' ? ' for ' + esc(CLSN[b.c]) : ''}</h2><div class="d2-f d2-f--pick"><label class="d2-q"><span class="rs-sr">Search</span>${ico('filter')}<input type="search" data-pq placeholder="Search name, ${kind === 'w' ? 'type, frame or perk' : 'exotic perk or set'}" autocomplete="off"></label>${chips('pr', [['all', 'All'], ['legendary', 'Legendary'], ['exotic', 'Exotic']], 'all', 'Rarity')}</div><div class="d2-grid d2-grid--s" data-pl></div>`, 'wide');
     let r = 'all';
-    const draw = () => { const qq = ($('[data-pq]', d).value || '').trim().toLowerCase(); const L = pool.filter((x) => (r === 'all' || x.r === r) && (!qq || qq.split(/\s+/).every((t) => x.txt.indexOf(t) > -1))).sort((x, y) => rel(y.rel) - rel(x.rel) || x.n.localeCompare(y.n)).slice(0, 90); $('[data-pl]', d).innerHTML = L.map((x) => tile(x, kind).replace('data-open=', 'data-choose=')).join('') || '<p class="d2-empty">Nothing matches.</p>'; };
+    const tops = curatedFor(kind, sl, b.c);
+    const draw = () => { const qq = ($('[data-pq]', d).value || '').trim().toLowerCase(); const topHtml = !qq && r === 'all' && tops.length ? `<p class="d2-pick__k">${ico('star')}Top picks for this slot</p>${tops.map((x) => tile(x, kind).replace('data-open=', 'data-choose=')).join('')}<p class="d2-pick__k">Everything else</p>` : ''; const L = pool.filter((x) => (r === 'all' || x.r === r) && (!qq || qq.split(/\s+/).every((t) => x.txt.indexOf(t) > -1))).sort((x, y) => rel(y.rel) - rel(x.rel) || x.n.localeCompare(y.n)).slice(0, 90); $('[data-pl]', d).innerHTML = topHtml + (L.map((x) => tile(x, kind).replace('data-open=', 'data-choose=')).join('') || '<p class="d2-empty">Nothing matches.</p>'); };
     draw();
     $('[data-pq]', d).addEventListener('input', debounce(draw, 100));
     d.addEventListener('change', (e) => { if (e.target.name === 'pr') { r = e.target.value; draw(); } });
     d.addEventListener('click', (e) => { const c = e.target.closest('[data-choose]'); if (!c) return; addToBuild(c.dataset.choose); });
-    setTimeout(() => $('[data-pq]', d).focus(), 30);
+    if (!isTouch()) setTimeout(() => $('[data-pq]', d).focus(), 30);
   }
   function buildCompare(S) {
     const cols = ['A', 'B'].map((k) => ({ k, b: S[k], T: buildTotals(S[k]) }));
