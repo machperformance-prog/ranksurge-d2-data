@@ -261,6 +261,8 @@
       `</div><p class="d2-fine">Opens the assistant in a new tab with a prompt that points it to this RankSurge page. These are independent services; some may ask you to sign in.</p></div></section>`;
   }
   document.addEventListener('click', (e) => {
+    const qa = e.target.closest('.d2-quick__a');
+    if (qa) { e.preventDefault(); history.replaceState(null, '', location.pathname + qa.getAttribute('href')); if (MODE === 'armor') armorView(); else weaponsView(); return; }
     const n = e.target.closest('.d2-sb[data-native]');
     if (n) { if (navigator.share) navigator.share({ title: n.dataset.title, url: n.dataset.native }).catch(() => {}); else (navigator.clipboard ? navigator.clipboard.writeText(n.dataset.native) : Promise.reject()).then(() => toast('Link copied'), () => toast(n.dataset.native)); return; }
     const c = e.target.closest('.d2-sb[data-copy]');
@@ -297,7 +299,7 @@
       <section class="d2-perks"><h3>Perks <small>${w.r === 'exotic' ? 'Exotic weapons have a fixed roll' : 'Tap one perk per column to build your god roll'}</small></h3><div class="d2-cols">${cols}</div><div class="d2-perkinfo" data-perkinfo aria-live="polite"><p>Tap a perk to read what it does.</p></div></section>
       ${peerTable}
       <div class="d2-det__act"><button type="button" class="rs-btn" data-add-build="w${w.h}">${ico('build')}Add to build</button><button type="button" class="rs-btn rs-btn--ghost" data-cmp="w${w.h}">${ico('compare')}${cmpGet().indexOf('w' + w.h) > -1 ? 'In compare' : 'Compare'}</button></div>${shareBlock('w', w)}</div>`);
-    history.replaceState(null, '', '#w' + w.h);
+    history.replaceState(null, '', '#w' + w.h); recentAdd('w' + w.h);
     function drawPeers() {
       const box = $('[data-peers]', d); if (!box) return;
       const st = ($('select[name=pst]', d) || {}).value || sortStat;
@@ -345,7 +347,7 @@
       <div class="d2-det__grid"><section>${ex ? `<h3>Exotic perk</h3><div class="d2-frame">${img(ex.i, 40, '')}<div><b>${esc(ex.n)}</b><p>${esc(ex.d)}</p></div></div>` : ''}${st ? `<h3>Set bonus: ${esc(st.n)}</h3><ul class="d2-setp">${st.p.map((p) => `<li><b>${p[0]} pieces · ${esc(p[1])}</b><p>${esc(p[2])}</p></li>`).join('')}</ul>` : ''}${!ex && !st ? '<h3>Perks</h3><p>No exotic perk or set bonus on this piece.</p>' : ''}<h3>Where to get it</h3><p>${esc(a.src || 'Source not listed by Bungie.')}</p></section>
       <section>${ro ? `<h3>Stat rolls</h3><ul class="d2-ranks">${ro}</ul><p class="d2-fine">Armor 3.0 pieces roll a primary and secondary stat from their archetype, plus one random tertiary stat. This piece totals ${total[0]}–${total[1]} before tuning and mods. Higher gear tiers roll closer to the top of each range.</p>` : '<h3>Stats</h3><p>This is older armor; its stats are set per drop, so they are not in Bungie\'s item data.</p>'}${arch ? `<h3>Possible archetypes</h3><ul class="d2-arch">${arch}</ul>` : ''}</section></div>
       <div class="d2-det__act"><button type="button" class="rs-btn" data-add-build="a${a.h}">${ico('build')}Add to build</button><button type="button" class="rs-btn rs-btn--ghost" data-cmp="a${a.h}">${ico('compare')}${cmpGet().indexOf('a' + a.h) > -1 ? 'In compare' : 'Compare'}</button></div>${shareBlock('a', a)}</div>`);
-    history.replaceState(null, '', '#a' + a.h);
+    history.replaceState(null, '', '#a' + a.h); recentAdd('a' + a.h);
     d.addEventListener('click', actions);
   }
   function openKey(k) { if (k[0] === 'w' && D.WH[k.slice(1)]) openWeapon(D.WH[k.slice(1)]); else if (k[0] === 'a' && D.AH[k.slice(1)]) openArmor(D.AH[k.slice(1)]); }
@@ -358,12 +360,26 @@
     if (cl) { const u = location.origin + location.pathname + cl.dataset.copyLink; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast('Link copied'), () => toast(u)); }
   }
 
+
+  /* ---------- recently viewed + quick picks ---------- */
+  const RK = 'rs_d2_recent';
+  function recentGet() { try { return JSON.parse(localStorage.getItem(RK) || '[]'); } catch (e) { return []; } }
+  function recentAdd(k) { try { const a = recentGet().filter((x) => x !== k); a.unshift(k); localStorage.setItem(RK, JSON.stringify(a.slice(0, 8))); } catch (e) { /* ignore */ } }
+  function recentRow() {
+    const a = recentGet().map((k) => (k[0] === 'w' ? D.WH[k.slice(1)] && ['w', D.WH[k.slice(1)]] : D.AH[k.slice(1)] && ['a', D.AH[k.slice(1)]])).filter(Boolean);
+    if (!a.length) return '';
+    return `<div class="d2-recent" aria-label="Recently viewed"><span class="d2-recent__k">${ico('clock')}Recently viewed</span>${a.map((x) => `<button type="button" class="d2-recent__b" data-open="${x[0]}${x[1].h}">${img(x[1].ic, 28, '')}<span>${esc(x[1].n)}</span></button>`).join('')}</div>`;
+  }
+  function quick(list) { return `<nav class="d2-quick" aria-label="Quick filters"><span class="d2-recent__k">${ico('bolt')}Quick picks</span>${list.map((q) => `<a class="d2-quick__a" href="${q[1]}">${esc(q[0])}</a>`).join('')}</nav>`; }
+  const QW = [['Exotic weapons', '?rarity=exotic'], ['Heavy weapons', '?ammo=heavy'], ['Craftable', '?craft=1'], ['Hand cannons', '?type=Hand+Cannon'], ['Pulse rifles', '?type=Pulse+Rifle'], ['Shotguns', '?type=Shotgun'], ['Sniper rifles', '?type=Sniper+Rifle'], ['Rocket launchers', '?type=Rocket+Launcher'], ['Highest Range', '?sort=Range'], ['Best Handling', '?sort=Handling']];
+  const QA = [['Hunter exotics', '?class=hunter&rarity=exotic'], ['Titan exotics', '?class=titan&rarity=exotic'], ['Warlock exotics', '?class=warlock&rarity=exotic'], ['Exotic class items', '?slot=class&rarity=exotic'], ['Gunner armor', '?arch=Gunner'], ['Grenadier armor', '?arch=Grenadier'], ['Paragon armor', '?arch=Paragon']];
+
   /* ---------- browse views ---------- */
   const PER = 60;
   function weaponsView() {
     const q = new URLSearchParams(location.search);
     const st = { q: q.get('q') || '', slot: q.get('slot') || 'all', ty: q.get('type') || 'all', el: q.get('el') || 'all', am: q.get('ammo') || 'all', r: q.get('rarity') || 'all', fr: q.get('frame') || 'all', sort: q.get('sort') || 'newest', min: +(q.get('min') || 0), craft: q.get('craft') === '1', adept: q.get('adept') === '1', n: PER };
-    APP.innerHTML = `${hubNav()}<form class="d2-f" data-f role="search" aria-label="Filter weapons" onsubmit="return false">
+    APP.innerHTML = `${hubNav()}${quick(QW)}${recentRow()}<form class="d2-f" data-f role="search" aria-label="Filter weapons" onsubmit="return false">
       <label class="d2-q"><span class="rs-sr">Search weapons, perks or frames</span>${ico('filter')}<input type="search" name="q" value="${esc(st.q)}" placeholder="Search a weapon, perk, frame or source" autocomplete="off"></label>
       ${chips('slot', [['all', 'All slots'], ['kinetic', 'Kinetic'], ['energy', 'Energy'], ['power', 'Power']], st.slot, 'Slot')}
       ${chips('el', [['all', 'All elements']].concat(ELEM.map((e) => [e, e])), st.el, 'Element')}
@@ -407,7 +423,7 @@
     const archs = Array.from(new Set(D.A.reduce((t, a) => t.concat(a.at || []), []))).map((h) => [String(h), pn(h)]).filter((x) => x[1]).sort((a, b) => a[1].localeCompare(b[1]));
     const archByName = {}; archs.forEach((a) => { (archByName[a[1]] = archByName[a[1]] || []).push(+a[0]); });
     const archOpts = Object.keys(archByName).sort().map((n) => { const p = perk(archByName[n][0]); return [n, n + (p && p.pr ? ` (${p.pr} / ${p.se})` : '')]; });
-    APP.innerHTML = `${hubNav()}<form class="d2-f" data-f role="search" aria-label="Filter armor" onsubmit="return false">
+    APP.innerHTML = `${hubNav()}${quick(QA)}${recentRow()}<form class="d2-f" data-f role="search" aria-label="Filter armor" onsubmit="return false">
       <label class="d2-q"><span class="rs-sr">Search armor, exotic perks or sets</span>${ico('filter')}<input type="search" name="q" value="${esc(st.q)}" placeholder="Search armor, an exotic perk, a set or a source" autocomplete="off"></label>
       ${chips('class', [['all', 'All classes'], ['hunter', 'Hunter'], ['titan', 'Titan'], ['warlock', 'Warlock']], st.cl, 'Class')}
       ${chips('slot', [['all', 'All slots']].concat(SLOTA.map((s) => [s, SLOTN[s]])), st.sl, 'Slot')}

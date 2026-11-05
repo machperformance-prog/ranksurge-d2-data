@@ -91,10 +91,10 @@
     </div></div></section>
   {%- endif -%}
 {%- endfor -%}
-{%- if page.handle == 'destiny-2-stats' -%}{% render 'rs-d2-profile' %}{%- endif -%}
+{%- if page.handle == 'destiny-2-stats' -%}{% render 'rs-d2-hub' %}{% render 'rs-d2-profile' %}{%- endif -%}
 {%- if page.handle == 'deadlock-stats' -%}{% render 'rs-dl-profile' %}{%- endif -%}
 {%- if page.handle == 'compare-players' -%}{% render 'rs-compare', pro_key: section.settings.pro_pass_key, ts_key: section.settings.turnstile_site_key %}{%- endif -%}
-{%- if page.handle == 'destiny-2-vault-manager' -%}{% render 'rs-d2-vault' %}{%- endif -%}
+{%- if page.handle == 'destiny-2-vault-manager' -%}{% render 'rs-d2-hub' %}{% render 'rs-d2-vault' %}{%- endif -%}
 {%- comment -%} v75: Destiny 2 weapon and armor database, build planner and best gear (assets/rs-d2db.js, data from github.com/machperformance-prog/ranksurge-d2-data). {%- endcomment -%}
 {%- case page.handle -%}
   {%- when 'destiny-2-weapons' -%}{% render 'rs-d2-db', mode: 'weapons' %}

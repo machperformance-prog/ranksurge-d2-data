@@ -232,3 +232,14 @@
 .d2-sb--ai:hover{border-color:#B57BFF;box-shadow:0 0 0 2px rgba(181,123,255,.18)}
 .d2-bld__sum .d2-share{padding:12px;margin-top:16px}
 .d2-bld__sum .d2-sb{min-height:40px;padding:0 10px;font-size:15px}
+/* quick picks + recently viewed */
+.d2-quick,.d2-recent{display:flex;align-items:center;gap:8px;overflow-x:auto;margin:0 0 12px;padding-bottom:4px;scrollbar-width:thin}
+.d2-recent__k{display:inline-flex;align-items:center;gap:6px;flex:none;font:700 13px var(--rs-body,sans-serif);letter-spacing:.1em;text-transform:uppercase;color:var(--mu)}
+.d2-quick__a{flex:none;display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid color-mix(in srgb,var(--g) 45%,var(--bd));background:var(--sf);color:#E6FBFF!important;font:600 16px var(--rs-display,'Rajdhani',sans-serif);text-decoration:none!important;white-space:nowrap}
+.d2-quick__a:hover{border-color:var(--g);box-shadow:0 0 0 1px var(--g)}
+.d2-recent__b{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:4px 12px 4px 4px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);color:#fff;font:600 15px var(--rs-body,'Barlow',sans-serif);cursor:pointer;white-space:nowrap}
+.d2-recent__b img{border-radius:6px}
+.d2-recent__b:hover{border-color:var(--rs-cyan,#00E5FF)}
+/* static hub on the stats and vault pages */
+.d2-hubwrap{padding:18px 0 0}
+.d2-hubwrap .d2-hub{margin:0}
