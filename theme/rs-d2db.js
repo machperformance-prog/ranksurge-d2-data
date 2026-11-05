@@ -914,9 +914,9 @@
       stats['opt_' + L + '_style'] = aiTxt(o.st[0]);
       SLOTW.forEach((sl) => { const c = o.w[sl]; stats['opt_' + L + '_' + sl] = c ? aiTxt(c.it.n + ' ' + c.it.ty) : '-'; });
       const ex = o.a && o.a.pick.find((c) => c.it.r === 'exotic'); stats['opt_' + L + '_exotic_armor'] = ex ? aiTxt(ex.it.n) : 'none';
-      stats['opt_' + L + '_stats'] = o.a ? aiTxt(AST.map((k) => k[0] + k[1] + ' ' + o.a.t[k]).join(' ')) : '-';
+      if (o.a) AST.forEach((k) => { stats['opt_' + L + '_' + k.toLowerCase() + '_stat'] = o.a.t[k]; });
     });
-    const q = `Which loadout, A, B or C, is best for ${A.n} on my ${CLSN[ch.cls]}? Start your answer with only the letter, then explain why in 2 or 3 short sentences using the weapons, exotic armor and stats given.`.slice(0, 300);
+    const q = `Which loadout, A, B or C, is best for ${A.n} on my ${CLSN[ch.cls]}? Start your answer with only the letter, then explain why in 2 or 3 short sentences using the weapons, exotic armor and the six armor stats given (Weapons, Health, Class, Grenade, Super, Melee).`.slice(0, 300);
     const body = { game: 'destiny-2', stats, question: q }; if (pass && pass.pass) body.pass = pass.pass;
     const hdr = { 'content-type': 'application/json' }; if (tok) hdr['x-rs-turnstile'] = tok;
     return fetch(API + '/v1/ask', { method: 'POST', credentials: 'omit', headers: hdr, body: JSON.stringify(body) }).then((r) => r.json().then((j) => ({ ok: r.ok, j, s: r.status }))).catch(() => ({ ok: false, j: {} }));
