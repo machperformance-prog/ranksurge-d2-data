@@ -1,0 +1,271 @@
+{%- liquid
+  # v57: hero emblem. Source: the editor's "Hero image" setting (any aspect ratio, shown contained), else Files: ranksurge-home-emblem.png,
+  # else the old portrait art (ranksurge-home-hero.png), else the rs-climb graphic.
+  assign hero_src = section.settings.hero_image
+  if hero_src == blank
+    assign hero_src = images['ranksurge-home-emblem.png']
+  endif
+  assign home_art = images['ranksurge-home-hero.png']
+  assign emb_alt = section.settings.hero_alt
+  if emb_alt contains 'Neon esports arena'
+    assign emb_alt = ''
+  endif
+  # v60: never show an old alt that mentions boosting (RankSurge is a stats site); fall back to a neutral description.
+  assign alt_chk = emb_alt | downcase
+  if alt_chk contains 'boost'
+    assign emb_alt = ''
+  endif
+  if hero_src != blank
+    assign alt_chk = hero_src.alt | downcase
+    if emb_alt == blank and alt_chk contains 'boost'
+      assign emb_alt = 'RankSurge logo with a rising rank arrow and rank emblems'
+    endif
+    assign emb_alt = emb_alt | default: hero_src.alt | default: 'RankSurge logo with a rising rank arrow and rank emblems'
+  endif
+  assign art_alt = home_art.alt
+  assign alt_chk = art_alt | downcase
+  if alt_chk contains 'boost'
+    assign art_alt = ''
+  endif
+  assign art_alt = art_alt | default: 'RankSurge neon logo art: a glowing cyan and violet rank emblem'
+-%}
+{%- liquid
+  # v59/v60: hero game picker. Six popular live games as chips (two of them hide on phones) plus an "All games" chip that opens a grid
+  # of every game. v60: Worker v21 games (StarCraft II, Brawl Stars, Clash Royale, Clash of Clans) render as LIVE as soon as their page
+  # exists (same rule as snippets/rs-live-games). The script below only downgrades one if /health reports its flag as false.
+  # v69: hh_new is split on commas, so the tile captions (6th field) must never contain a comma.
+  assign hh_new = 'sc2|StarCraft II|StarCraft II|Profile link or region/realm/id|starcraft-2-stats|Top 200 ladder,bs|Brawl Stars|Brawl Stars|Player tag (e.g. #2PP0YQ)|brawl-stars-stats|Club board,cr|Clash Royale|Clash Royale|Player tag (e.g. #9CQ2U8QJ)|clash-royale-stats|Deck and clan board,coc|Clash of Clans|Clash of Clans|Player tag (e.g. #P0LYJC8C)|clash-of-clans-stats|Clan board,wot|World of Tanks|World of Tanks|Exact player name|world-of-tanks-stats|Most played tanks,chess|Chess.com|Chess.com|Chess.com username|chess-stats|Recent games and openings,lichess|Lichess|Lichess|Lichess username|lichess-stats|Recent games and openings,osu|osu!|osu!|osu! username|osu-stats|Top 10 plays,hypixel|Hypixel|Hypixel|Minecraft username|hypixel-stats|Bed Wars · SkyWars · Duels,wows|World of Warships|World of Warships|Exact player name|world-of-warships-stats|Most played ships,wotb|WoT Blitz|World of Tanks Blitz|Exact player name|world-of-tanks-blitz-stats|Most played tanks,fortnite|Fortnite|Fortnite|Epic display name|fortnite-stats|Solo · Duos · Squads,rust|Rust|Rust|Steam profile link or SteamID64|rust-stats|K/D · headshots · hit rate|hub,tf2|Team Fortress 2|TF2|Steam profile link or SteamID64|tf2-stats|Class playtime · kills · records|hub' | split: ','
+  assign hh_n = 11
+  assign hh_live = 6
+  assign hh_list = 'Deadlock|CS2|Dota 2|Destiny 2|PUBG|World of Warcraft'
+  assign hh_keys = '|||||'
+  assign hh_aip_list = 'Deadlock|CS2|Dota 2|PUBG|Destiny 2|World of Warcraft'
+  # v73: games whose lookups need an API key that is not added yet (World of Tanks, osu!, Hypixel, World of Warships, WoT Blitz)
+  # come back from rs-live-games mode 'pend' as ",key,key,". They render under Coming soon; the script below moves one to Live
+  # only when /health reports it on (flag true or listed in games). Rust and TF2 (Steam) are live like the other Worker games.
+  capture hh_pend
+    render 'rs-live-games', mode: 'pend'
+  endcapture
+  assign hh_pend = hh_pend | strip
+  assign hh_soon = ''
+  for x in hh_new
+    assign xp = x | split: '|'
+    assign xk = ',' | append: xp[0] | append: ','
+    if pages[xp[4]].handle != blank
+      assign hh_n = hh_n | plus: 1
+      if hh_pend contains xk
+        assign hh_soon = hh_soon | append: '|' | append: xp[1]
+      else
+        assign hh_live = hh_live | plus: 1
+        assign hh_list = hh_list | append: '|' | append: xp[1]
+        assign hh_keys = hh_keys | append: '|' | append: xp[0]
+        # v68: Fortnite has no AI Profile Pick support in the Worker yet (CMP_KEYS), so it is not named as an AI Pick game. v73: nor Rust or TF2.
+        unless xp[0] == 'fortnite' or xp[0] == 'rust' or xp[0] == 'tf2'
+          assign hh_aip_list = hh_aip_list | append: '|' | append: xp[1]
+        endunless
+      endif
+    endif
+  endfor
+  # v73: Path of Exile 2 is guides only (no lookups until Grinding Gear Games reopens developer applications).
+  assign hh_poe2 = false
+  if pages['path-of-exile-2-stats'].handle != blank
+    assign hh_poe2 = true
+    assign hh_n = hh_n | plus: 1
+  endif
+  assign hh_soon_a = hh_soon | remove_first: '|' | split: '|'
+  capture hh_soon_sent
+    for g in hh_soon_a
+      if forloop.first
+        echo g
+      elsif forloop.last
+        echo ' and ' | append: g
+      else
+        echo ', ' | append: g
+      endif
+    endfor
+  endcapture
+  assign hh_soon_sent = hh_soon_sent | strip
+  capture hh_sent
+    render 'rs-live-games', names: 'mixed'
+  endcapture
+  assign hh_sent = hh_sent | strip
+  assign hh_aip = hh_aip_list | split: '|'
+  capture hh_aip_sent
+    for g in hh_aip
+      if forloop.first
+        echo g
+      elsif forloop.last
+        echo ' and ' | append: g
+      else
+        echo ', ' | append: g
+      endif
+    endfor
+  endcapture
+  assign nw = 'Six,Seven,Eight,Nine,Ten,Eleven,Twelve,Thirteen,Fourteen,Fifteen,Sixteen,Seventeen,Eighteen,Nineteen,Twenty' | split: ','
+  assign nw_i = hh_live | minus: 6
+  assign hh_live_w = nw[nw_i] | default: hh_live
+  assign hh_api = shop.metafields.ranksurge.stats_api_base.value | default: shop.metafields.ranksurge.stats_api_base
+-%}
+<style>
+/* v59: hero game picker that scales to 10+ live games. Six live chips (Dota 2 and Destiny 2 hide on phones) plus a compact
+   "All games" chip that opens an inline grid of every game, grouped Live / Coming soon / Guides only. */
+.rs-hh__chips{display:contents}
+.rs-hh__all{gap:8px;border-style:solid;border-color:color-mix(in srgb,var(--rs-violet-soft,#B57BFF) 60%,var(--rs-border));color:#fff}
+.rs-hh__all .rs-ico{color:var(--rs-violet-soft,#B57BFF)}
+.rs-hh__all[aria-expanded="true"],.rs-hh__all.is-pick{border-color:var(--rs-cyan,#00E5FF);background:color-mix(in srgb,var(--rs-cyan,#00E5FF) 12%,var(--rs-bg))}
+.rs-hh__all::after{content:"";width:8px;height:8px;margin-left:2px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s}
+.rs-hh__all[aria-expanded="true"]::after{transform:rotate(225deg) translate(-2px,-2px)}
+.rs-hh__grid{display:grid;gap:8px;max-width:600px;margin:12px 0 0;padding:14px;border-radius:16px;background:rgba(17,19,24,.96);border:1px solid rgba(181,123,255,.35);box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.rs-hh__grid[hidden]{display:none}
+.rs-hh__gl{display:flex;align-items:center;gap:8px;margin:4px 0 0;font:700 13px/1.2 var(--rs-body);letter-spacing:.12em;text-transform:uppercase;color:#C9CED8}
+.rs-hh__gl:first-child{margin-top:0}
+.rs-hh__gn{margin-left:auto;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.08);font:700 12px/1.3 var(--rs-body);letter-spacing:0;color:#fff}
+.rs-hh__gl b{width:8px;height:8px;border-radius:50%}.rs-hh__gl b.is-live{background:var(--rs-gain)}.rs-hh__gl b.is-soon{background:#FFB020}.rs-hh__gl b.is-guide{background:var(--rs-cyan)}
+.rs-hh__gg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.rs-hh__gg:empty,.rs-hh__gg:empty+.rs-hh__gl{display:none}
+.rs-hh__grid .rs-chip{justify-content:flex-start;width:100%;min-height:44px;padding:8px 12px;font-size:15px;border-radius:12px}
+.rs-hh__grid .rs-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:640px){.rs-hh__chips [data-pri="2"]{display:none}.rs-hh__gg{grid-template-columns:repeat(2,minmax(0,1fr))}.rs-hh__grid{padding:12px}}
+@media (prefers-reduced-motion:reduce){.rs-hh__all::after{transition:none}}
+/* v73 accents */
+.g-poe2{--g:#E0A040}.g-rust{--g:#E8743B}.g-tf2{--g:#E0523A}
+
+/* v77: Destiny 2 database announcement on the game tile */
+.rs-game__new{display:flex;align-items:flex-start;gap:8px;margin:8px 0 2px;padding:8px 10px;border-radius:8px;border:1px solid rgba(0,229,255,.45);background:rgba(0,229,255,.08);color:#E6FBFF!important;font:600 15px/1.35 var(--rs-body);text-decoration:none}.rs-game__new:hover{border-color:var(--rs-cyan);box-shadow:0 0 14px rgba(0,229,255,.25)}.rs-game__new b{flex:none;padding:1px 7px;border-radius:5px;background:var(--rs-cyan);color:#08090C;font:700 13px/1.5 var(--rs-display);letter-spacing:.04em;text-transform:uppercase}
+</style>
+<section data-api="{{ hh_api | escape }}" class="rs-hh{% if hero_src != blank %} rs-hh--emblem{% elsif home_art != blank %} rs-hh--art{% endif %}">
+  <div class="rs-wrap rs-hh__in">
+    <div>
+      <h1>The Free Game Stats Tracker for Competitive Players</h1>
+      <p class="rs-hh__sub">Rank history, match reports and AI comparisons, free in your browser with no Overwolf. Live player lookups for <span data-hf-sent data-list="{{ hh_list }}" data-keys="{{ hh_keys }}">{{ hh_sent }}</span>.</p>
+      <div class="rs-look__games rs-hh__games"><div class="rs-hh__chips" role="radiogroup" aria-label="Game"><button type="button" role="radio" aria-checked="true" class="rs-chip g-deadlock" data-g="deadlock" data-name="Deadlock" data-fmt="Steam profile link or SteamID64">{% render 'rs-icon', name: 'deadlock' %}<span>Deadlock</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip g-counter-strike-2" data-g="counter-strike-2" data-name="CS2" data-fmt="Steam profile link or SteamID64">{% render 'rs-icon', name: 'counter-strike-2' %}<span>CS2</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip g-dota-2" data-g="dota-2" data-name="Dota 2" data-pri="2" data-fmt="Steam name or friend ID">{% render 'rs-icon', name: 'dota-2' %}<span>Dota 2</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip g-pubg" data-g="pubg" data-name="PUBG" data-fmt="Exact in-game name (case-sensitive)">{% render 'rs-icon', name: 'pubg' %}<span>PUBG</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip g-destiny-2" data-g="destiny-2" data-name="Destiny 2" data-pri="2" data-fmt="Bungie Name (Name#1234)">{% render 'rs-icon', name: 'destiny-2' %}<span>Destiny 2</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip g-wow" data-g="wow" data-name="World of Warcraft" data-fmt="Character-Realm (e.g. Name-Stormrage)">{% render 'rs-icon', name: 'wow' %}<span>WoW</span></button></div><button type="button" class="rs-chip rs-hh__all" id="rs-hh-allb" aria-expanded="false" aria-controls="rs-hh-all" data-lbl="All {{ hh_n }} games"><svg class="rs-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>All {{ hh_n }} games</span></button></div>
+      <div class="rs-hh__grid" id="rs-hh-all" role="group" aria-label="All games" hidden><p class="rs-hh__gl" id="rs-hh-gl1"><b class="is-live" aria-hidden="true"></b>Live lookups <span class="rs-hh__gn" data-live-c>{{ hh_live }}</span></p><div class="rs-hh__gg" role="radiogroup" aria-labelledby="rs-hh-gl1" data-gg="live"><button type="button" role="radio" aria-checked="true" class="rs-chip rs-hh__gb g-deadlock" data-g="deadlock" data-name="Deadlock" data-fmt="Steam profile link or SteamID64">{% render 'rs-icon', name: 'deadlock' %}<span>Deadlock</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb g-counter-strike-2" data-g="counter-strike-2" data-name="CS2" data-fmt="Steam profile link or SteamID64">{% render 'rs-icon', name: 'counter-strike-2' %}<span>CS2</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb g-dota-2" data-g="dota-2" data-name="Dota 2" data-pri="2" data-fmt="Steam name or friend ID">{% render 'rs-icon', name: 'dota-2' %}<span>Dota 2</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb g-pubg" data-g="pubg" data-name="PUBG" data-fmt="Exact in-game name (case-sensitive)">{% render 'rs-icon', name: 'pubg' %}<span>PUBG</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb g-destiny-2" data-g="destiny-2" data-name="Destiny 2" data-pri="2" data-fmt="Bungie Name (Name#1234)">{% render 'rs-icon', name: 'destiny-2' %}<span>Destiny 2</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb g-wow" data-g="wow" data-name="World of Warcraft" data-fmt="Character-Realm (e.g. Name-Stormrage)">{% render 'rs-icon', name: 'wow' %}<span>WoW</span></button>{%- for x in hh_new -%}{%- assign xp = x | split: '|' -%}{%- assign xk = ',' | append: xp[0] | append: ',' -%}{%- if pages[xp[4]].handle != blank -%}{%- unless hh_pend contains xk -%}<button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb g-{{ xp[0] }}" data-g="{{ xp[0] }}" data-hf="{{ xp[0] }}"{% if xp[6] == 'hub' %} data-act="/pages/{{ xp[4] }}"{% endif %} data-name="{{ xp[1] }}" data-fmt="{{ xp[3] }}" data-href="/pages/{{ xp[4] }}" data-link="Read about {{ xp[1] }} on RankSurge">{% render 'rs-icon', name: xp[0] %}<span>{{ xp[2] }}</span></button>{%- endunless -%}{%- endif -%}{%- endfor -%}</div><p class="rs-hh__gl" id="rs-hh-gl2"><b class="is-soon" aria-hidden="true"></b>Coming soon</p><div class="rs-hh__gg" role="radiogroup" aria-labelledby="rs-hh-gl2" data-gg="soon"><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb rs-chip--off g-league-of-legends" data-g="league-of-legends" data-off="League of Legends lookups open after Riot approval." data-href="/pages/league-of-legends-stats" data-link="Read the League of Legends guides" data-name="League">{% render 'rs-icon', name: 'league-of-legends' %}<span>League</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb rs-chip--off g-tft" data-g="tft" data-off="TFT lookups open after Riot approval." data-href="/pages/tft-stats" data-link="Read the TFT guides" data-name="TFT">{% render 'rs-icon', name: 'tft' %}<span>TFT</span></button>{%- for x in hh_new -%}{%- assign xp = x | split: '|' -%}{%- assign xk = ',' | append: xp[0] | append: ',' -%}{%- if pages[xp[4]].handle != blank and hh_pend contains xk -%}<button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb rs-chip--off g-{{ xp[0] }}" data-g="{{ xp[0] }}" data-hk="{{ xp[0] }}" data-name="{{ xp[1] }}" data-fmt="{{ xp[3] }}" data-off="{{ xp[1] }} lookups are coming soon." data-href="/pages/{{ xp[4] }}" data-link="Read about {{ xp[1] }} on RankSurge">{% render 'rs-icon', name: xp[0] %}<span>{{ xp[2] }}</span></button>{%- endif -%}{%- endfor -%}</div><p class="rs-hh__gl" id="rs-hh-gl3"><b class="is-guide" aria-hidden="true"></b>Guides only</p><div class="rs-hh__gg" role="radiogroup" aria-labelledby="rs-hh-gl3" data-gg="guide"><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb rs-chip--off g-valorant" data-g="valorant" data-guide="1" data-off="Valorant is guides only: Riot does not allow public Valorant player lookups." data-href="/pages/valorant-stats" data-link="Read the Valorant rank guides" data-name="Valorant">{% render 'rs-icon', name: 'valorant' %}<span>Valorant</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb rs-chip--off g-overwatch-2" data-g="overwatch-2" data-guide="1" data-off="Overwatch 2 is guides only: Blizzard has no official public Overwatch stats API." data-href="/pages/overwatch-2-stats" data-link="Read the Overwatch 2 rank guides" data-name="Overwatch 2">{% render 'rs-icon', name: 'overwatch-2' %}<span>Overwatch 2</span></button><button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb rs-chip--off g-marvel-rivals" data-g="marvel-rivals" data-guide="1" data-off="Marvel Rivals is guides only: NetEase has no official Marvel Rivals API." data-href="/pages/marvel-rivals-stats" data-link="Read the Marvel Rivals rank guides" data-name="Marvel Rivals">{% render 'rs-icon', name: 'marvel-rivals' %}<span>Rivals</span></button>{%- if hh_poe2 -%}<button type="button" role="radio" aria-checked="false" class="rs-chip rs-hh__gb rs-chip--off g-poe2" data-g="poe2" data-guide="1" data-off="Path of Exile 2 is guides only for now: player lookups open when Grinding Gear Games reopens developer applications." data-href="/pages/path-of-exile-2-stats" data-link="Open the Path of Exile 2 hub" data-name="Path of Exile 2">{% render 'rs-icon', name: 'poe2' %}<span>PoE 2</span></button>{%- endif -%}</div></div>
+      <form class="rs-hh__form" action="/pages/player-lookup" method="get" role="search">
+        <input type="hidden" name="g" value="deadlock">
+        <label class="rs-sr" for="rs-home-q">Player ID</label>
+        <input id="rs-home-q" name="q" type="search" placeholder="Steam profile link or SteamID64" autocomplete="off" required>
+        <button class="rs-btn" type="submit">{% render 'rs-icon', name: 'search' %}Search</button>
+      </form>
+      <p class="rs-hh__off" id="rs-home-off" role="status" aria-live="polite" hidden></p>
+      <p class="rs-hh__note">Live now: <a href="/pages/deadlock-stats">Deadlock</a>, <a href="/pages/cs2-stats">CS2</a>, <a href="/pages/dota-2-stats">Dota 2</a>, <a href="/pages/destiny-2-stats">Destiny 2</a>, <a href="/pages/pubg-stats">PUBG</a>, <a href="/pages/wow-stats">World of Warcraft</a>{%- for x in hh_new -%}{%- assign xp = x | split: '|' -%}{%- assign xk = ',' | append: xp[0] | append: ',' -%}{%- if pages[xp[4]].handle != blank -%}{%- unless hh_pend contains xk -%}<span data-hf-i="{{ xp[0] }}">, <a href="/pages/{{ xp[4] }}">{{ xp[1] }}</a></span>{%- endunless -%}{%- endif -%}{%- endfor -%}, plus the <a href="/pages/destiny-2-vault-manager">Destiny 2 vault manager</a> and <a href="/pages/wow-leaderboards">WoW leaderboards</a>. League of Legends and TFT open after Riot approval.</p>
+    </div>
+    <div class="rs-hh__art{% if hero_src != blank %} rs-hh__art--emb{% elsif home_art != blank %} rs-hh__art--pic{% endif %}">{%- if hero_src != blank -%}{{ hero_src | image_url: width: 1600 | image_tag: class: 'rs-hh__emb', widths: '400, 600, 800, 1024, 1280, 1600', sizes: '(max-width: 960px) min(420px, 88vw), min(620px, 50vw)', loading: 'eager', fetchpriority: 'high', alt: emb_alt }}{%- elsif home_art != blank -%}{{ home_art | image_url: width: 848 | image_tag: class: 'rs-hh__pic', widths: '300, 400, 600, 848', sizes: '(max-width: 640px) 242px, (max-width: 960px) 300px, 410px', loading: 'eager', fetchpriority: 'high', alt: art_alt }}{%- else -%}{% render 'rs-climb' %}{%- endif -%}</div>
+  </div>
+</section>
+<section class="rs-sec rs-aip"><div class="rs-wrap"><a class="rs-aip__card" href="/pages/compare-players">
+  <div class="rs-aip__vs" aria-hidden="true"><span class="a">A</span><b>VS</b><span class="b">B</span></div>
+  <div class="rs-aip__txt"><p class="rs-aip__k"><i>AI</i> RankSurge signature tool</p><h2>AI Profile Pick</h2><p>Enter two players. Our AI picks the stronger profile and tells you why, in seconds. Live for <span data-hf-sent data-list="{{ hh_aip_list }}" data-keys="{{ hh_keys }}">{{ hh_aip_sent | strip }}</span>.</p></div>
+  <span class="rs-aip__go">Try it free {% render 'rs-icon', name: 'arrow-right' %}</span>
+</a></div></section>
+{%- if hero_src != blank -%}
+<style>
+/* v57 hero emblem: contained in the normal two-column hero (inside the 1160px wrap). Flat page background, a soft violet glow
+   behind the emblem that stays inside its column, a 4% edge feather, no cropping. <=960px: stacked, emblem centred below the search. */
+.rs-hh--emblem{background:var(--rs-bg)}
+.rs-hh--emblem::before,.rs-hh--emblem::after{display:none}
+.rs-hh--emblem .rs-hh__in{grid-template-columns:minmax(0,1fr) min(620px,50%);gap:28px;align-items:center}
+.rs-hh__art--emb{position:relative;display:flex;justify-content:center;align-items:center;isolation:isolate;min-width:0}
+.rs-hh__art--emb::before{content:"";position:absolute;inset:6%;z-index:-1;border-radius:50%;background:radial-gradient(closest-side,rgba(138,43,226,.26),rgba(0,229,255,.07) 62%,transparent 100%);pointer-events:none}
+.rs-hh__emb{display:block;width:100%;height:auto;max-width:100%;object-fit:contain;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 4%,#000 96%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 4%,#000 96%,transparent 100%);-webkit-mask-composite:source-in;
+  mask-image:linear-gradient(to right,transparent 0,#000 4%,#000 96%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 4%,#000 96%,transparent 100%);mask-composite:intersect}
+@media (max-width:960px){
+  .rs-hh--emblem .rs-hh__in{grid-template-columns:minmax(0,1fr);gap:28px}
+  .rs-hh__art--emb .rs-hh__emb{width:min(420px,88vw)}
+}
+</style>
+{%- endif -%}
+{% render 'rs-share' %}{% render 'rs-ad-slot', placement: 'banner' %}
+<section class="rs-sec"><div class="rs-wrap">
+  <h2>Pick your game</h2>
+  <p class="rs-sec__lede"><span data-live-n>{{ hh_live_w }}</span> games have live player lookups today. League of Legends and TFT open after Riot approval, and Valorant, Overwatch 2 and Marvel Rivals have rank guides now.{% if hh_soon_sent != blank %}<span data-soon-s> {{ hh_soon_sent }} lookups are coming soon.</span>{% endif %}{% if hh_poe2 %} Path of Exile 2 has league, ladder and 1.0 launch guides.{% endif %} Each hub explains the rank ladder and the stats that matter.</p>
+  <div class="rs-gg rs-gg--live"><h3 class="rs-gg__lbl" id="rs-gg-live"><b aria-hidden="true"></b>Live lookups</h3><ul class="rs-games" aria-labelledby="rs-gg-live" data-gg-live><li class="rs-game g-deadlock is-live"><a class="rs-game__a" href="/pages/deadlock-stats">{% render 'rs-icon', name: 'deadlock', size: 72 %}<span class="rs-game__n">Deadlock</span></a><span class="rs-game__s"><b aria-hidden="true"></b>Live lookups</span></li><li class="rs-game g-counter-strike-2 is-live"><a class="rs-game__a" href="/pages/cs2-stats">{% render 'rs-icon', name: 'counter-strike-2', size: 72 %}<span class="rs-game__n">Counter-Strike 2</span></a><p class="rs-game__x"><a href="/pages/cs2-pro-comparisons">Pro comparisons</a> <a href="/pages/cs2-inventory-value">Inventory value</a></p><span class="rs-game__s"><b aria-hidden="true"></b>Live lookups</span></li><li class="rs-game g-dota-2 is-live"><a class="rs-game__a" href="/pages/dota-2-stats">{% render 'rs-icon', name: 'dota-2', size: 72 %}<span class="rs-game__n">Dota 2</span></a><p class="rs-game__x"><a href="/pages/dota-2-hero-tier-list">Hero tier list</a></p><span class="rs-game__s"><b aria-hidden="true"></b>Live lookups</span></li><li class="rs-game g-destiny-2 is-live"><a class="rs-game__a" href="/pages/destiny-2-stats">{% render 'rs-icon', name: 'destiny-2', size: 72 %}<span class="rs-game__n">Destiny 2</span></a><p class="rs-game__x"><a href="/pages/destiny-2-vault-manager">Vault manager</a> <span>Clan board</span></p><a class="rs-game__new" href="/pages/destiny-2-weapons"><b>New</b> Weapons &amp; armor database, build planner and best gear</a><span class="rs-game__s"><b aria-hidden="true"></b>Live lookups</span></li><li class="rs-game g-pubg is-live"><a class="rs-game__a" href="/pages/pubg-stats">{% render 'rs-icon', name: 'pubg', size: 72 %}<span class="rs-game__n">PUBG</span></a><span class="rs-game__s"><b aria-hidden="true"></b>Live lookups</span></li><li class="rs-game g-wow is-live"><a class="rs-game__a" href="/pages/wow-stats">{% render 'rs-icon', name: 'wow', size: 72 %}<span class="rs-game__n">World of Warcraft</span></a><p class="rs-game__x"><a href="/pages/wow-leaderboards">Leaderboards</a> <span>Guild board</span></p><span class="rs-game__s"><b aria-hidden="true"></b>Live lookups</span></li>{%- for x in hh_new -%}{%- assign xp = x | split: '|' -%}{%- assign xk = ',' | append: xp[0] | append: ',' -%}{%- if pages[xp[4]].handle != blank -%}{%- unless hh_pend contains xk -%}<li class="rs-game g-{{ xp[0] }} is-live" data-hf="{{ xp[0] }}"><a class="rs-game__a" href="/pages/{{ xp[4] }}">{% render 'rs-icon', name: xp[0], size: 72 %}<span class="rs-game__n">{% if xp[0] == 'hypixel' %}Minecraft Hypixel{% else %}{{ xp[1] }}{% endif %}</span></a><p class="rs-game__x">{%- if xp[0] == 'fortnite' -%}{%- if pages['fortnite-item-shop'].handle != blank -%}<a href="/pages/fortnite-item-shop">Item Shop</a> {% endif -%}{%- if pages['fortnite-leaderboard'].handle != blank -%}<a href="/pages/fortnite-leaderboard">Leaderboard</a> {% endif -%}{%- if pages['fortnite-map'].handle != blank -%}<a href="/pages/fortnite-map">Map</a>{%- endif -%}{%- else -%}<span>{{ xp[5] }}</span>{%- endif -%}</p><span class="rs-game__s"><b aria-hidden="true"></b><span data-hf-s>Live lookups</span></span></li>{%- endunless -%}{%- endif -%}{%- endfor -%}</ul></div><div class="rs-gg rs-gg--soon"><h3 class="rs-gg__lbl" id="rs-gg-soon"><b aria-hidden="true"></b>Coming soon</h3><ul class="rs-games" aria-labelledby="rs-gg-soon" data-gg-soon><li class="rs-game g-league-of-legends is-soon"><a class="rs-game__a" href="/pages/league-of-legends-stats">{% render 'rs-icon', name: 'league-of-legends', size: 72 %}<span class="rs-game__n">League of Legends</span></a><span class="rs-game__s"><b aria-hidden="true"></b>After Riot approval</span></li><li class="rs-game g-tft is-soon"><a class="rs-game__a" href="/pages/tft-stats">{% render 'rs-icon', name: 'tft', size: 72 %}<span class="rs-game__n">Teamfight Tactics</span></a><span class="rs-game__s"><b aria-hidden="true"></b>After Riot approval</span></li>{%- for x in hh_new -%}{%- assign xp = x | split: '|' -%}{%- assign xk = ',' | append: xp[0] | append: ',' -%}{%- if pages[xp[4]].handle != blank and hh_pend contains xk -%}<li class="rs-game g-{{ xp[0] }} is-soon" data-hk="{{ xp[0] }}"><a class="rs-game__a" href="/pages/{{ xp[4] }}">{% render 'rs-icon', name: xp[0], size: 72 %}<span class="rs-game__n">{% if xp[0] == 'hypixel' %}Minecraft Hypixel{% else %}{{ xp[1] }}{% endif %}</span></a><p class="rs-game__x"><span>{{ xp[5] }}</span></p><span class="rs-game__s"><b aria-hidden="true"></b><span data-hf-s>Lookups coming soon</span></span></li>{%- endif -%}{%- endfor -%}</ul></div><div class="rs-gg rs-gg--guide"><h3 class="rs-gg__lbl" id="rs-gg-guide"><b aria-hidden="true"></b>Guides &amp; ranks</h3><ul class="rs-games" aria-labelledby="rs-gg-guide"><li class="rs-game g-valorant is-guide"><a class="rs-game__a" href="/pages/valorant-stats">{% render 'rs-icon', name: 'valorant', size: 72 %}<span class="rs-game__n">Valorant</span></a><span class="rs-game__s"><b aria-hidden="true"></b>Ranks + guides</span></li><li class="rs-game g-overwatch-2 is-guide"><a class="rs-game__a" href="/pages/overwatch-2-stats">{% render 'rs-icon', name: 'overwatch-2', size: 72 %}<span class="rs-game__n">Overwatch 2</span></a><span class="rs-game__s"><b aria-hidden="true"></b>Ranks + guides</span></li><li class="rs-game g-marvel-rivals is-guide"><a class="rs-game__a" href="/pages/marvel-rivals-stats">{% render 'rs-icon', name: 'marvel-rivals', size: 72 %}<span class="rs-game__n">Marvel Rivals</span></a><span class="rs-game__s"><b aria-hidden="true"></b>Ranks + guides</span></li>{%- if hh_poe2 -%}<li class="rs-game g-poe2 is-guide"><a class="rs-game__a" href="/pages/path-of-exile-2-stats">{% render 'rs-icon', name: 'poe2', size: 72 %}<span class="rs-game__n">Path of Exile 2</span></a><p class="rs-game__x"><span>Leagues · ladder · 1.0 on December 11</span></p><span class="rs-game__s"><b aria-hidden="true"></b>Guides + 1.0 launch hub</span></li>{%- endif -%}</ul></div>
+</div></section>
+{%- comment -%} v70: Latest guides. Newest articles tagged "guides" or "Site Guides" in the news blog, as game-colored cards (rs-cards.css).
+  Cards without an article image get a gradient in the game color, so a new guide never shows an empty box. {%- endcomment -%}
+{%- assign rs_lg_n = 0 -%}
+{%- capture rs_lg -%}
+{%- for a in blogs.news.articles -%}
+  {%- if rs_lg_n >= 6 -%}{%- break -%}{%- endif -%}
+  {%- if a.tags contains 'guides' or a.tags contains 'Site Guides' -%}
+    {%- assign rs_lg_n = rs_lg_n | plus: 1 -%}
+    {%- assign gm = a.metafields.rspost.game.value | default: 'General' -%}
+    {%- assign gk = gm | handleize -%}
+    {%- case gk -%}{%- when 'world-of-warcraft' -%}{%- assign gk = 'wow' -%}{%- when 'teamfight-tactics' -%}{%- assign gk = 'tft' -%}{%- endcase -%}
+    {%- if a.image -%}{%- capture bg -%}url('{{ a.image | image_url: width: 900 }}'){%- endcapture -%}{%- else -%}{%- assign bg = 'linear-gradient(135deg,#0B1A2E,var(--g,#00E5FF) 55%,#7B2FF7)' -%}{%- endif -%}
+    <article class="rs-post rs-svc" style="--bg:{{ bg }}"><a class="rs-post__img" href="{{ a.url }}" tabindex="-1" aria-hidden="true"></a><div class="rs-post__body">
+    <p class="rs-post__meta" data-g="{{ gk }}">{{ gm | escape }}</p>
+    <h3 class="rs-post__h"><a href="{{ a.url }}">{{ a.title | escape }}</a></h3>
+    <p class="rs-post__ex">{{ a.excerpt_or_content | strip_html | truncatewords: 26 }}</p>
+    <a class="rs-btn rs-btn--ghost rs-post__more" href="{{ a.url }}">Read the guide<span class="rs-sr">: {{ a.title | escape }}</span></a>
+    </div></article>
+  {%- endif -%}
+{%- endfor -%}
+{%- endcapture -%}
+{%- if rs_lg_n > 0 -%}
+<section class="rs-sec rs-lg"><div class="rs-wrap">
+  <h2>New guides</h2>
+  <p class="rs-sec__lede">Fresh guides from the RankSurge Team: ranks, stats and climbing plans, each with sources and the season it covers. Every guide is in the <a href="/pages/guide-library">Guide Library</a>.</p>
+  <div class="rs-posts">{{ rs_lg }}</div>
+  <p class="rs-lg__all"><a class="rs-btn" href="/pages/guide-library">See all guides {% render 'rs-icon', name: 'arrow-right' %}</a></p>
+</div></section>
+<style>.rs-lg__all{margin:24px 0 0;text-align:center}</style>
+{%- endif -%}
+<section class="rs-sec"><div class="rs-wrap">
+  <h2>Stats that help you climb, not just look busy</h2>
+  <p class="rs-sec__lede">Every feature is built around one question: what should you do differently next game?</p>
+  <div class="rs-feat"><div class="rs-feat__i">{% render 'rs-icon', name: 'rank-history' %}<h3>Rank history charts</h3><p>See how your official rank moves across a season, with the matches behind every climb and drop.</p></div><div class="rs-feat__i">{% render 'rs-icon', name: 'match-tracker' %}<h3>Match report cards</h3><p>A clear post-match breakdown of what went right and wrong, so each game teaches you something.</p></div><div class="rs-feat__i">{% render 'rs-icon', name: 'ai-profile-pick' %}<h3><a href="/pages/compare-players">AI Profile Pick</a></h3><p>Live now. Put two players side by side and our AI picks the stronger profile, with the stats that decided it.</p></div><div class="rs-feat__i">{% render 'rs-icon', name: 'tier-lists' %}<h3>Patch-day tier lists</h3><p>Tier lists updated when patches land, with notes on why each pick moved, not just where.</p></div><div class="rs-feat__i">{% render 'rs-icon', name: 'vault' %}<h3><a href="/pages/destiny-2-vault-manager">Destiny 2 vault manager</a></h3><p>Live now. Move, equip and lock your Destiny 2 gear from any device through official Bungie sign-in. No password needed.</p></div><div class="rs-feat__i">{% render 'rs-icon', name: 'bolt' %}<h3>No-Overwolf web app</h3><p>Runs in your browser. Nothing to install, no overlay, and no effect on your frame rate or anti-cheat.</p></div></div>
+</div></section>
+<section class="rs-sec"><div class="rs-wrap">
+  <h2>How does RankSurge work?</h2>
+  <p class="rs-sec__lede">Three steps from search to a better next game.</p>
+  <ol class="rs-steps"><li><h3>Search your player name</h3><p>Pick your game, enter your player name and region tag, and RankSurge finds your public profile.</p></li><li><h3>Link when a game requires it</h3><p>For your own Destiny 2 Guardian and vault, sign in on Bungie&#x27;s official page. We never see your password.</p></li><li><h3>Review and improve</h3><p>Read your match report cards and rank history between games, spot patterns, and set your next rank goal.</p></li></ol>
+</div></section>
+<section class="rs-sec"><div class="rs-wrap">
+  <h2>How is RankSurge different from tracker apps?</h2>
+  <p class="rs-sec__lede">Many popular trackers run as overlay apps with ad walls. RankSurge is a fast web app built for review between games.</p>
+  <table class="rs-table rs-cmp"><thead><tr><th>What matters</th><th>RankSurge</th><th>Many overlay tracker apps</th></tr></thead><tbody><tr><td>Install required</td><td>No, runs in your browser</td><td class="n">Usually a desktop app</td></tr><tr><td>In-game overlay</td><td>None</td><td class="n">Often</td></tr><tr><td>Pre-match lobby scouting</td><td>Never</td><td class="n">Common</td></tr><tr><td>Stat formulas published</td><td>Yes</td><td class="n">Rarely</td></tr><tr><td>Sample size shown next to win rates</td><td>Yes</td><td class="n">Rarely</td></tr><tr><td>Price</td><td>Free tier, always</td><td class="n">Free with ads, paid upgrades</td></tr></tbody></table>
+</div></section>
+{% render 'rs-ad-slot', placement: 'featured' %}{% render 'rs-ad-slot', placement: 'spotlight' %}
+<section class="rs-sec"><div class="rs-wrap">
+  {% render 'rs-home-faq', mode: 'html' %}
+</div></section>
+<section class="rs-sec"><div class="rs-wrap">
+  <div class="rs-cta"><div><h2>Be first when your game goes live</h2><p>One email the day lookups open for your game, then a weekly rank recap. Unsubscribe anytime.</p></div><a class="rs-btn" href="#newsletter">Get launch alerts</a></div>
+</div></section>
+{% render 'rs-home-faq', mode: 'ld' %}
+<script>
+(function(){var r=document.querySelector('.rs-hh');if(!r)return;var q=document.getElementById('rs-home-q'),g=r.querySelector('input[name=g]'),f=r.querySelector('.rs-hh__form'),sb=f.querySelector('button[type=submit]'),off=document.getElementById('rs-home-off'),allb=document.getElementById('rs-hh-allb'),grid=document.getElementById('rs-hh-all');
+function esc(s){return String(s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+function btns(){return [].slice.call(r.querySelectorAll('.rs-hh__chips [data-g],.rs-hh__grid [data-g]'));}
+function setAll(open){if(!grid||!allb)return;grid.hidden=!open;allb.setAttribute('aria-expanded',String(open));}
+function label(b){if(!allb)return;var sp=allb.querySelector('span'),k=b.dataset.g,vis=[].slice.call(r.querySelectorAll('.rs-hh__chips [data-g]')).some(function(x){return x.dataset.g===k&&x.offsetParent!==null;});
+if(vis){sp.textContent=allb.dataset.lbl;allb.classList.remove('is-pick');allb.removeAttribute('aria-label');}else{sp.textContent=b.dataset.name||b.textContent.trim();allb.classList.add('is-pick');allb.setAttribute('aria-label',allb.dataset.lbl+', '+(b.dataset.name||'')+' selected');}}
+function choose(b,focus){var k=b.dataset.g;btns().forEach(function(x){x.setAttribute('aria-checked',String(x.dataset.g===k));});label(b);
+if(b.dataset.off){q.value='';q.disabled=true;sb.disabled=true;f.classList.add('is-off');q.placeholder=b.dataset.name+(b.dataset.guide?': guides only':': not open yet');off.innerHTML=esc(b.dataset.off)+' <a href="'+esc(b.dataset.href)+'">'+esc(b.dataset.link)+'</a>';off.hidden=false;return;}
+q.disabled=false;sb.disabled=false;f.classList.remove('is-off');off.hidden=true;q.placeholder=b.dataset.fmt;g.value=k;f.setAttribute('action',b.dataset.act||'/pages/player-lookup');if(focus)q.focus();}
+r.addEventListener('click',function(e){var b=e.target.closest?e.target.closest('[data-g]'):null;if(b&&r.contains(b)&&(b.closest('.rs-hh__chips')||b.closest('.rs-hh__grid'))){var inGrid=!!b.closest('.rs-hh__grid');choose(b,true);if(inGrid){setAll(false);if(b.dataset.off)allb.focus();}return;}
+if(e.target.closest&&e.target.closest('#rs-hh-allb')){var open=grid.hidden;setAll(open);if(open){var c=grid.querySelector('[aria-checked="true"]')||grid.querySelector('[data-g]');if(c)c.focus();}}});
+if(grid)grid.addEventListener('keydown',function(e){if(e.key==='Escape'){setAll(false);allb.focus();}});
+window.addEventListener('resize',function(){var c=r.querySelector('.rs-hh__chips [aria-checked="true"]')||grid&&grid.querySelector('[aria-checked="true"]');if(c)label(c);});
+/* v60: Worker v21 games render live once their page exists. /health can only DOWNGRADE one whose flag is exactly false
+   (e.g. switched off for maintenance); a failed or missing /health never hides a live game. */
+var NW=['Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen','Twenty'],api=String(r.getAttribute('data-api')||'').replace(/\/$/,'');
+function down(k){[].forEach.call(document.querySelectorAll('[data-hf="'+k+'"]'),function(el){if(el.tagName==='BUTTON'){el.classList.add('rs-chip--off');el.setAttribute('data-off',(el.dataset.name||'')+' lookups are paused right now. Please check back soon.');var sg=grid&&grid.querySelector('[data-gg="soon"]');if(sg)sg.insertBefore(el,sg.firstChild);}else{el.classList.remove('is-live');el.classList.add('is-soon');var s=el.querySelector('[data-hf-s]');if(s)s.textContent='Paused for now';var su=document.querySelector('[data-gg-soon]');if(su)su.insertBefore(el,su.firstChild);}});
+[].forEach.call(document.querySelectorAll('[data-hf-i="'+k+'"]'),function(el){el.parentNode.removeChild(el);});}
+/* v73: games waiting on an API key (data-hk) start under Coming soon and move to Live only when /health reports them on
+   (flag exactly true, or listed in games). A missing flag or a failed /health leaves them as Coming soon. */
+function up(k){[].forEach.call(document.querySelectorAll('[data-hk="'+k+'"]'),function(el){if(el.tagName==='BUTTON'){el.classList.remove('rs-chip--off');el.removeAttribute('data-off');var lg=grid&&grid.querySelector('[data-gg="live"]');if(lg)lg.appendChild(el);}else{el.classList.remove('is-soon');el.classList.add('is-live');var s=el.querySelector('[data-hf-s]');if(s)s.textContent='Live lookups';var lu=document.querySelector('[data-gg-live]');if(lu)lu.appendChild(el);}});}
+if(api&&document.querySelector('[data-hf],[data-hk]'))fetch(api+'/health',{credentials:'omit'}).then(function(x){return x.ok?x.json():null;}).then(function(h){if(!h||typeof h!=='object')return;var gone={},ng=0,ups={},nu=0,hg=Array.isArray(h.games)?h.games:[];
+[].forEach.call(document.querySelectorAll('.rs-hh__grid [data-hf]'),function(b){var k=b.dataset.hf;if(h[k]===false&&!gone[k]){gone[k]=1;ng++;}});
+[].forEach.call(document.querySelectorAll('.rs-hh__grid [data-hk]'),function(b){var k=b.dataset.hk;if(!ups[k]&&h[k]!==false&&(h[k]===true||hg.indexOf(k)>-1)){ups[k]=1;nu++;}});
+if(!ng&&!nu)return;Object.keys(gone).forEach(down);Object.keys(ups).forEach(up);
+if(nu)[].forEach.call(document.querySelectorAll('[data-soon-s]'),function(el){el.parentNode.removeChild(el);});
+var lc=document.querySelector('[data-live-c]'),n=(lc?+lc.textContent:6)-ng+nu;if(lc)lc.textContent=n;
+[].forEach.call(document.querySelectorAll('[data-live-n]'),function(el){el.textContent=NW[n-6]||String(n);});
+[].forEach.call(document.querySelectorAll('[data-hf-sent]'),function(el){var L=String(el.getAttribute('data-list')||'').split('|'),K=String(el.getAttribute('data-keys')||'').split('|'),l=L.filter(function(x,i){return x&&!gone[K[i]];});if(l.length)el.textContent=l.length>1?l.slice(0,-1).join(', ')+' and '+l[l.length-1]:l[0];});
+var c=r.querySelector('.rs-hh__grid [aria-checked="true"]')||r.querySelector('[aria-checked="true"]');if(c)choose(c,false);}).catch(function(){});})();
+</script>
+{% schema %}
+{"name":"RankSurge home","settings":[{"type":"image_picker","id":"hero_image","label":"Hero image"},{"type":"text","id":"hero_alt","label":"Hero image alt text","default":"RankSurge logo with a rising rank arrow and rank emblems"}]}
+{% endschema %}
