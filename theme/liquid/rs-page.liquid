@@ -138,7 +138,7 @@
 {%- assign ptp = 'deadlock-stats,cs2-stats,dota-2-stats,destiny-2-stats,fortnite-stats,pubg-stats,league-of-legends-stats,tft-stats,wow-stats,starcraft-2-stats,brawl-stars-stats,clash-royale-stats,clash-of-clans-stats,world-of-tanks-stats,chess-stats,lichess-stats,osu-stats,hypixel-stats,world-of-warships-stats,world-of-tanks-blitz-stats,rust-stats,tf2-stats' | split: ',' -%}
 {%- if ptp contains page.handle -%}<script src="{{ 'rs-prof-tools.js' | asset_url }}" defer></script>{% render 'rs-pdash', pro_key: section.settings.pro_pass_key, ts_key: section.settings.turnstile_site_key %}{%- endif -%}
 <div class="rs-body{% if hubg != '' %} rs-hubpage g-{{ hubg }}{% endif %}">
-  <article class="rs">{{ body }}{%- if page.handle == 'advertise' -%}{% render 'rs-blogpkgs' %}{%- endif -%}</article>
+  <article class="rs">{{ body }}{%- comment -%} v82 SEO: a page with FAQ schema but no visible FAQ shows the same questions, so structured data always matches the page. {%- endcomment -%}{%- assign rs_fq = page.metafields.custom.faq_schema.value.mainEntity -%}{%- if rs_fq != blank -%}{%- unless body contains 'rs-faq' -%}<section class="rs-faq"><h2>Frequently asked questions</h2>{%- for q in rs_fq -%}<details><summary><h3>{{ q.name | escape }}</h3></summary><p>{{ q.acceptedAnswer.text | escape }}</p></details>{%- endfor -%}</section>{%- endunless -%}{%- endif -%}{%- if page.handle == 'advertise' -%}{% render 'rs-blogpkgs' %}{%- endif -%}</article>
 </div>
 {%- liquid
   # v53: Ask RankSurge AI coach (Worker v19 /v1/help) on game pages, pages with custom.about_game, game tool pages and the Player Hub.
