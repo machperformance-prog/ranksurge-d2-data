@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="468" height="60" viewBox="0 0 468 60" role="img" aria-label="My Chess.com stats on RankSurge">
+<defs><linearGradient id="b" x1="0" x2="1"><stop offset="0" stop-color="#0B0E17"/><stop offset="1" stop-color="#151A2B"/></linearGradient>
+<linearGradient id="n" x1="0" x2="1"><stop offset="0" stop-color="#22D3EE"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+<rect width="468" height="60" rx="8" fill="url(#b)"/><rect x="0" y="0" width="6" height="60" rx="3" fill="#81B64C"/>
+<rect x=".5" y=".5" width="467" height="59" rx="7.5" fill="none" stroke="url(#n)" stroke-opacity=".55"/>
+<g transform="translate(20,14)"><rect x="0" y="18" width="7" height="14" rx="1.5" fill="#81B64C"/><rect x="10" y="11" width="7" height="21" rx="1.5" fill="#81B64C" opacity=".85"/><rect x="20" y="4" width="7" height="28" rx="1.5" fill="#81B64C" opacity=".7"/><path d="M1 12 L11 6 L18 9 L28 1" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="62" y="28" font-family="Inter,Segoe UI,Helvetica,Arial,sans-serif" font-size="17" font-weight="800" fill="#fff" letter-spacing=".5">MY CHESS.COM STATS</text>
+<text x="62" y="46" font-family="Inter,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#A9B4CC">Rank, stats and AI compare · free</text>
+<text x="452" y="36" text-anchor="end" font-family="Inter,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="800" fill="url(#n)">RankSurge</text>
+</svg>
