@@ -555,6 +555,8 @@
     const S = bLoad();
     const h = location.hash.match(/^#b=([A-Za-z0-9_-]+)/);
     if (h) { const b = dec(h[1]); if (b && b.w && b.a) { S[S.cur] = Object.assign(blank(b.c), b); bSave(S); toast('Build loaded from link'); } history.replaceState(null, '', location.pathname); }
+    const dl = (location.hash.match(/^#(compare|agent|optimize)$/) || [])[1];
+    if (dl) { history.replaceState(null, '', location.pathname); if (dl === 'compare') { S.cur = 'CMP'; bSave(S); } else { if (S.cur === 'CMP') { S.cur = 'A'; bSave(S); } setTimeout(() => { const bt = APP.querySelector(dl === 'agent' ? '[data-agent]' : '[data-optim]'); if (bt) { bt.scrollIntoView({ block: 'center' }); bt.click(); } }, 60); } }
     if (S.cur === 'CMP') return buildCompare(S);
     const b = S[S.cur];
     const T = buildTotals(b);
@@ -1048,6 +1050,7 @@
     D = data; index(); try { if (localStorage.getItem('rs_d2_dbg') === '1') window.__rsd2 = { D, prof: () => PROF, myWeapons, myArmor, agentBuild, ACTS }; } catch (e) { /* debug hook off */ }
     R.classList.add('is-ready');
     const st = $('[data-d2-asof]', R); if (st && D.meta.built) st.textContent = 'Data from Bungie, updated ' + new Date(D.meta.built).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) + '.';
+    if (MODE === 'build') window.addEventListener('hashchange', () => { if (/^#(compare|agent|optimize)$/.test(location.hash)) buildView(); });
     if (MODE === 'armor') armorView(); else if (MODE === 'build') buildView(); else if (MODE === 'top') topView(); else weaponsView();
     tray();
     const h = location.hash.match(/^#([wa])(\d+)$/); if (h) openKey(h[1] + h[2]);
